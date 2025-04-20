@@ -4,23 +4,38 @@ import {
   TableCell, TableContainer, TableHead, TableRow, IconButton, 
   Dialog, DialogActions, DialogContent, DialogTitle, 
   FormControl, InputLabel, Select, MenuItem, Alert, Snackbar,
-  Tabs, Tab, useTheme, Chip, CircularProgress
+  Tabs, Tab, useTheme, Chip
 } from '@mui/material';
 import { LanguageContext } from '../App';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
 import LockIcon from '@mui/icons-material/Lock';
-import { articlesAPI, projectsAPI, resourcesAPI, contactsAPI, subscriptionsAPI } from '../db/models';
-import supabase from '../config/supabase';
 
-// 初始数据结构
+// 初始数据 - 实际应用中应从后端API获取
 const initialData = {
-  articles: [],
-  projects: [],
-  resources: [],
-  contacts: [],
-  subscriptions: []
+  articles: [
+    { id: 1, title: '文章1', category: 'tech', content: '这是技术文章内容', date: '2023-01-01' },
+    { id: 2, title: '文章2', category: 'life', content: '这是生活文章内容', date: '2023-01-02' },
+  ],
+  projects: [
+    { id: 1, name: '项目1', description: '项目1描述', technologies: 'React, Node.js', imageUrl: '/images/project1.jpg' },
+    { id: 2, name: '项目2', description: '项目2描述', technologies: 'Vue, Express', imageUrl: '/images/project2.jpg' },
+  ],
+  resources: [
+    { id: 1, title: '资源1', category: 'article', description: '这是一篇技术文章', link: 'https://example.com/article1' },
+    { id: 2, title: '资源2', category: 'note', description: '这是一篇学习笔记', link: 'https://example.com/note1' },
+  ],
+  contacts: []
+};
+
+// localStorage存储键
+const STORAGE_KEYS = {
+  articles: 'articleData',
+  projects: 'projectData',
+  resources: 'resourceData',
+  contacts: 'contactMessages',
+  subscriptions: 'subscriptionEmails'
 };
 
 function Admin() {
@@ -37,7 +52,6 @@ function Admin() {
   const [openDialog, setOpenDialog] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
-  const [loading, setLoading] = useState(false);
   
   // 表单状态 - 根据当前选项卡动态设置
   const [formData, setFormData] = useState({});
@@ -150,61 +164,47 @@ function Admin() {
   };
   
   // 保存数据
-  const handleSave = async () => {
-    try {
-      setLoading(true);
-      const dataType = getDataTypeByTabIndex(currentTab);
-      const api = getAPIByDataType(dataType);
-      
-      let savedItem;
-      if (editItem) {
-        // 编辑现有项
-        savedItem = await api.update(editItem.id, formData);
-        setData(prev => ({
-          ...prev,
-          [dataType]: prev[dataType].map(item =>
-            item.id === editItem.id ? savedItem : item
-          )
-        }));
-        showSnackbar(language === 'zh' ? '更新成功' : 'Updated successfully', 'success');
-      } else {
-        // 添加新项
-        savedItem = await api.create(formData);
-        setData(prev => ({
-          ...prev,
-          [dataType]: [...prev[dataType], savedItem]
-        }));
-        showSnackbar(language === 'zh' ? '添加成功' : 'Added successfully', 'success');
-      }
-      
-      handleCloseDialog();
-    } catch (error) {
-      console.error('保存数据失败:', error);
-      showSnackbar(language === 'zh' ? '操作失败' : 'Operation failed', 'error');
-    } finally {
-      setLoading(false);
+  const handleSave = () => {
+    const dataType = getDataTypeByTabIndex(currentTab);
+    let newData = { ...data };
+    
+    if (editItem) {
+      // 编辑现有项
+      newData[dataType] = data[dataType].map(item => 
+        item.id === editItem.id ? { ...item, ...formData } : item
+      );
+      showSnackbar(language === 'zh' ? '更新成功' : 'Updated successfully', 'success');
+    } else {
+      // 添加新项
+      const newId = Math.max(0, ...data[dataType].map(item => item.id)) + 1;
+      const newItem = { id: newId, ...formData };
+      newData[dataType] = [...data[dataType], newItem];
+      showSnackbar(language === 'zh' ? '添加成功' : 'Added successfully', 'success');
     }
+    
+    setData(newData);
+    handleCloseDialog();
+    
+    // 更新localStorage
+    localStorage.setItem(STORAGE_KEYS[dataType], JSON.stringify(newData[dataType]));
+    
+    // 在实际应用中，这里应该调用API将数据保存到后端
+    console.log('保存的数据:', newData);
   };
   
   // 删除数据
-  const handleDelete = async (id) => {
-    try {
-      setLoading(true);
-      const dataType = getDataTypeByTabIndex(currentTab);
-      const api = getAPIByDataType(dataType);
-      
-      await api.delete(id);
-      setData(prev => ({
-        ...prev,
-        [dataType]: prev[dataType].filter(item => item.id !== id)
-      }));
-      showSnackbar(language === 'zh' ? '删除成功' : 'Deleted successfully', 'success');
-    } catch (error) {
-      console.error('删除数据失败:', error);
-      showSnackbar(language === 'zh' ? '删除失败' : 'Delete failed', 'error');
-    } finally {
-      setLoading(false);
-    }
+  const handleDelete = (id) => {
+    const dataType = getDataTypeByTabIndex(currentTab);
+    const newData = { ...data };
+    newData[dataType] = data[dataType].filter(item => item.id !== id);
+    setData(newData);
+    showSnackbar(language === 'zh' ? '删除成功' : 'Deleted successfully', 'success');
+    
+    // 更新localStorage
+    localStorage.setItem(STORAGE_KEYS[dataType], JSON.stringify(newData[dataType]));
+    
+    // 在实际应用中，这里应该调用API将删除操作同步到后端
+    console.log('删除后的数据:', newData);
   };
   
   // 显示提示消息
@@ -229,99 +229,95 @@ function Admin() {
     }
   };
   
-  // 获取对应的API
-  const getAPIByDataType = (dataType) => {
-    switch(dataType) {
-      case 'articles': return articlesAPI;
-      case 'projects': return projectsAPI;
-      case 'resources': return resourcesAPI;
-      case 'contacts': return contactsAPI;
-      case 'subscriptions': return subscriptionsAPI;
-      default: return articlesAPI;
-    }
-  };
-
   // 初始化数据加载和实时监听
   useEffect(() => {
-    let subscriptions = [];
-
-    const loadAllData = async () => {
-      try {
-        setLoading(true);
-        // 从Supabase加载所有数据
-        const [articles, projects, resources, contacts, subs] = await Promise.all([
-          articlesAPI.getAll(),
-          projectsAPI.getAll(),
-          resourcesAPI.getAll(),
-          contactsAPI.getAll(),
-          subscriptionsAPI.getAll()
-        ]);
-
-        setData({
-          articles,
-          projects,
-          resources,
-          contacts,
-          subscriptions: subs
-        });
-      } catch (error) {
-        console.error('加载数据失败:', error);
-        showSnackbar(language === 'zh' ? '加载数据失败' : 'Failed to load data', 'error');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    // 设置实时订阅
-    const setupSubscriptions = () => {
-      const tables = ['articles', 'projects', 'resources', 'contacts', 'subscriptions'];
-      
-      tables.forEach(table => {
-        const subscription = supabase
-          .channel(`public:${table}`)
-          .on('postgres_changes', { event: '*', schema: 'public', table }, (payload) => {
-            const { eventType, new: newRecord, old: oldRecord } = payload;
-            
-            setData(prev => {
-              switch (eventType) {
-                case 'INSERT':
-                  return {
-                    ...prev,
-                    [table]: [...prev[table], newRecord]
-                  };
-                case 'UPDATE':
-                  return {
-                    ...prev,
-                    [table]: prev[table].map(item =>
-                      item.id === newRecord.id ? newRecord : item
-                    )
-                  };
-                case 'DELETE':
-                  return {
-                    ...prev,
-                    [table]: prev[table].filter(item => item.id !== oldRecord.id)
-                  };
-                default:
-                  return prev;
-              }
-            });
-          })
-          .subscribe();
+    try {
+      // 从localStorage加载所有数据
+      const loadAllData = () => {
+        // 加载文章数据
+        const articlesData = JSON.parse(localStorage.getItem(STORAGE_KEYS.articles) || JSON.stringify(initialData.articles));
         
-        subscriptions.push(subscription);
-      });
-    };
-
-    // 加载初始数据并设置实时订阅
-    loadAllData();
-    setupSubscriptions();
-
-    // 清理订阅
-    return () => {
-      subscriptions.forEach(subscription => {
-        supabase.removeChannel(subscription);
-      });
-    };
+        // 加载项目数据
+        const projectsData = JSON.parse(localStorage.getItem(STORAGE_KEYS.projects) || JSON.stringify(initialData.projects));
+        
+        // 加载资源数据
+        const resourcesData = JSON.parse(localStorage.getItem(STORAGE_KEYS.resources) || JSON.stringify(initialData.resources));
+        
+        // 加载联系信息数据
+        const contactsData = JSON.parse(localStorage.getItem(STORAGE_KEYS.contacts) || '[]');
+        // 按时间戳降序排序，最新的消息显示在前面
+        const sortedContactsData = contactsData.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        
+        // 加载邮箱订阅数据
+        const subscriptionsData = JSON.parse(localStorage.getItem(STORAGE_KEYS.subscriptions) || '[]');
+        // 按时间戳降序排序，最新的订阅显示在前面
+        const sortedSubscriptionsData = subscriptionsData.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        
+        // 更新数据状态
+        setData({
+          articles: articlesData,
+          projects: projectsData,
+          resources: resourcesData,
+          contacts: sortedContactsData,
+          subscriptions: sortedSubscriptionsData
+        });
+      };
+      
+      // 初始加载数据
+      loadAllData();
+      
+      // 设置storage事件监听器，当localStorage变化时更新数据
+      const handleStorageChange = (event) => {
+        const key = event.key;
+        
+        // 根据变化的存储键更新相应的数据
+        if (key === STORAGE_KEYS.articles) {
+          const articlesData = JSON.parse(localStorage.getItem(STORAGE_KEYS.articles) || '[]');
+          setData(prevData => ({ ...prevData, articles: articlesData }));
+          if (currentTab === 0) {
+            showSnackbar(language === 'zh' ? '文章数据已更新' : 'Article data updated', 'info');
+          }
+        } else if (key === STORAGE_KEYS.projects) {
+          const projectsData = JSON.parse(localStorage.getItem(STORAGE_KEYS.projects) || '[]');
+          setData(prevData => ({ ...prevData, projects: projectsData }));
+          if (currentTab === 1) {
+            showSnackbar(language === 'zh' ? '项目数据已更新' : 'Project data updated', 'info');
+          }
+        } else if (key === STORAGE_KEYS.resources) {
+          const resourcesData = JSON.parse(localStorage.getItem(STORAGE_KEYS.resources) || '[]');
+          setData(prevData => ({ ...prevData, resources: resourcesData }));
+          if (currentTab === 2) {
+            showSnackbar(language === 'zh' ? '资源数据已更新' : 'Resource data updated', 'info');
+          }
+        } else if (key === STORAGE_KEYS.contacts) {
+          const contactsData = JSON.parse(localStorage.getItem(STORAGE_KEYS.contacts) || '[]');
+          // 按时间戳降序排序
+          const sortedData = contactsData.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+          setData(prevData => ({ ...prevData, contacts: sortedData }));
+          if (currentTab === 3) {
+            showSnackbar(language === 'zh' ? '收到新的联系信息' : 'New contact message received', 'info');
+          }
+        } else if (key === STORAGE_KEYS.subscriptions) {
+          const subscriptionsData = JSON.parse(localStorage.getItem(STORAGE_KEYS.subscriptions) || '[]');
+          // 按时间戳降序排序
+          const sortedData = subscriptionsData.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+          setData(prevData => ({ ...prevData, subscriptions: sortedData }));
+          if (currentTab === 4) {
+            showSnackbar(language === 'zh' ? '收到新的邮箱订阅' : 'New email subscription received', 'info');
+          }
+        }
+      };
+      
+      // 添加事件监听
+      window.addEventListener('storage', handleStorageChange);
+      
+      // 清理函数
+      return () => {
+        window.removeEventListener('storage', handleStorageChange);
+      };
+    } catch (error) {
+      console.error('加载数据时出错:', error);
+    }
   }, [currentTab, language]);
   
   // 初始化时将数据保存到localStorage

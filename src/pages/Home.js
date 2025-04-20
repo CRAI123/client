@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import CodeIcon from '@mui/icons-material/Code';
 import TerminalIcon from '@mui/icons-material/Terminal';
 import { LanguageContext } from '../App';
+import Chat from '../components/Chat';
 
 function Home() {
   const navigate = useNavigate();
@@ -106,6 +107,9 @@ function Home() {
           {language === 'zh' ? '作品集' : 'Portfolio'}
         </Button>
       </Box>
+      
+      {/* AI对话组件 */}
+      <Chat />
     </Box>
   );
 }
