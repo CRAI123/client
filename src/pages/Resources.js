@@ -1,22 +1,27 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Box, Typography, Paper, List, ListItem, ListItemText, Divider, Button, Chip } from '@mui/material';
+import { Box, Typography, Paper, List, ListItem, ListItemText, Divider, Button, Chip, IconButton, Tooltip } from '@mui/material';
+import StarIcon from '@mui/icons-material/Star';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
 import { useNavigate } from 'react-router-dom';
 import { LanguageContext } from '../App';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Resources() {
   const navigate = useNavigate();
   const { language } = useContext(LanguageContext);
+  const { currentUser, isAuthenticated, addFavorite, removeFavorite, isFavorite } = useAuth();
   const [resources, setResources] = useState([]);
+  const [favoriteChanged, setFavoriteChanged] = useState(false);
   
   // 初始资源数据
   const initialResources = {
     article: [
-      { id: 1, title: "React Hooks 完全指南", description: "React Hooks是React 16.8引入的新特性，它允许在不编写类组件的情况下使用状态和其他React特性...", link: "https://example.com/article1", category: "article" },
-      { id: 2, title: "Node.js 性能优化指南", description: "Node.js作为一个高性能的JavaScript运行时环境，有很多优化技巧可以提升应用性能...", link: "https://example.com/article2", category: "article" }
+      { id: 1, title: "ChatGPT-4o + Tripo = 王炸", description: "GPT-4o + Tripo 生成3D手办，从此解放双手", link: "https://blog.csdn.net/lcr557hcck/article/details/147165941?fromshare=blogdetail&sharetype=blogdetail&sharerId=147165941&sharerefer=PC&sharesource=lcr557hcck&sharefrom=from_link", category: "article" },
+      //{ id: 2, title: "Node.js 性能优化指南", description: "Node.js作为一个高性能的JavaScript运行时环境，有很多优化技巧可以提升应用性能...", link: "https://example.com/article2", category: "article" }
     ],
     note: [
-      { id: 3, title: "JavaScript 高级程序设计笔记", description: "《JavaScript高级程序设计》是前端开发者必读的经典书籍，本文整理了学习笔记...", link: "https://example.com/note1", category: "note" },
-      { id: 4, title: "数据结构与算法总结", description: "数据结构与算法是计算机科学的基础，掌握它们对提升编程能力至关重要...", link: "https://example.com/note2", category: "note" }
+      //{ id: 3, title: "JavaScript 高级程序设计笔记", description: "《JavaScript高级程序设计》是前端开发者必读的经典书籍，本文整理了学习笔记...", link: "https://example.com/note1", category: "note" },
+      //{ id: 4, title: "数据结构与算法总结", description: "数据结构与算法是计算机科学的基础，掌握它们对提升编程能力至关重要...", link: "https://example.com/note2", category: "note" }
     ]
   };
   
@@ -64,6 +69,26 @@ export default function Resources() {
   // 处理资源点击事件
   const handleResourceClick = (link) => {
     window.open(link, '_blank');
+  };
+  
+  // 处理收藏/取消收藏
+  const handleToggleFavorite = (event, resourceId) => {
+    event.stopPropagation();
+    
+    if (!isAuthenticated) {
+      // 如果未登录，跳转到登录页面
+      navigate('/login');
+      return;
+    }
+    
+    if (isFavorite(resourceId)) {
+      removeFavorite(resourceId);
+    } else {
+      addFavorite(resourceId);
+    }
+    
+    // 更新状态触发重新渲染
+    setFavoriteChanged(!favoriteChanged);
   };
   
   // 根据分类对资源进行分组
@@ -119,7 +144,22 @@ export default function Resources() {
             <List>
               {groupedResources[category].map((resource) => (
                 <React.Fragment key={resource.id}>
-                  <ListItem button onClick={() => handleResourceClick(resource.link)}>
+                  <ListItem 
+                    button 
+                    onClick={() => handleResourceClick(resource.link)}
+                    secondaryAction={
+                      <Tooltip title={language === 'zh' ? (isFavorite(resource.id) ? '取消收藏' : '收藏') : (isFavorite(resource.id) ? 'Remove from favorites' : 'Add to favorites')}>
+                        <IconButton 
+                          edge="end" 
+                          aria-label="favorite"
+                          onClick={(event) => handleToggleFavorite(event, resource.id)}
+                          sx={{ color: isFavorite(resource.id) ? '#00e5ff' : 'rgba(255, 255, 255, 0.5)' }}
+                        >
+                          {isFavorite(resource.id) ? <StarIcon /> : <StarBorderIcon />}
+                        </IconButton>
+                      </Tooltip>
+                    }
+                  >
                     <ListItemText 
                       primary={resource.title} 
                       secondary={resource.description} 
