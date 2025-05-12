@@ -57,6 +57,23 @@ function Footer() {
               Copyright © {currentYear}. All rights reserved.
             </Typography>
             
+            {/* 公众号二维码 */}
+            <Box sx={{ mb: 2 }}>
+              <img 
+                src="/images/qrcode_for_gh_b603ed04972b_258.jpg" 
+                alt="公众号二维码" 
+                style={{ 
+                  width: '120px', 
+                  height: '120px',
+                  borderRadius: '8px',
+                  marginBottom: '8px'
+                }} 
+              />
+              <Typography variant="body2" color="text.secondary">
+                扫码关注公众号
+              </Typography>
+            </Box>
+            
             {/* 邮件订阅框 */}
             <Box sx={{ display: 'flex', mt: { xs: 3, md: 4 }, mb: { xs: 2, md: 3 } }}>
               <TextField
