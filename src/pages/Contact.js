@@ -125,7 +125,7 @@ function Contact() {
       }} />
       
       <Grid container spacing={{ xs: 2, sm: 3, md: 4 }}>
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12} md={6} sx={{ display: 'none' }}>
           <Paper elevation={3} sx={{ 
             p: 3, 
             height: '100%',
@@ -234,7 +234,8 @@ function Contact() {
                   px: { xs: 2, md: 3 },
                   py: { xs: 1, md: 1.2 },
                   borderRadius: '4px',
-                  boxShadow: '0 0 15px rgba(0, 229, 255, 0.5)'
+                  boxShadow: '0 0 15px rgba(0, 229, 255, 0.5)',
+                  display: 'none' // 暂时隐藏发送消息按钮
                 }}
                 endIcon={<SendIcon />}
               >

@@ -19,6 +19,7 @@ import Register from './pages/Register';
 import Profile from './pages/Profile';
 import Footer from './components/Footer';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import VipZone from './pages/VipZone';
 
 // 创建语言上下文
 export const LanguageContext = createContext();
@@ -138,6 +139,7 @@ function NavigationBar() {
         <Button color="primary" href="/about" sx={{ mx: 0.8 }}>{language === 'zh' ? '关于我' : 'About'}</Button>
         <Button color="primary" href="/portfolio" sx={{ mx: 0.8 }}>{language === 'zh' ? '作品集' : 'Portfolio'}</Button>
         <Button color="primary" href="/resources" sx={{ mx: 0.8 }}>{language === 'zh' ? '资料分享' : 'Resources'}</Button>
+        <Button color="primary" href="/vip-zone" sx={{ mx: 0.8, color: '#FFD700', '&:hover': { backgroundColor: 'rgba(255, 215, 0, 0.1)' } }}>{language === 'zh' ? '会员专区' : 'VIP Zone'}</Button>
         <Button color="primary" href="/contact" sx={{ mx: 0.8 }}>{language === 'zh' ? '联系方式' : 'Contact'}</Button>
         
         <UserMenu />
@@ -208,6 +210,7 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/vip-zone" element={<VipZone />} />
           </Routes>
         </Container>
         <Footer />

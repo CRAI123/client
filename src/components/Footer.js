@@ -1,9 +1,5 @@
 import React, { useContext, useState } from 'react';
-import { Box, Container, Typography, Link, IconButton, TextField, Button, Grid, useTheme, Snackbar, Alert } from '@mui/material';
-import GitHubIcon from '@mui/icons-material/GitHub';
-import LinkedInIcon from '@mui/icons-material/LinkedIn';
-import TwitterIcon from '@mui/icons-material/Twitter';
-import EmailIcon from '@mui/icons-material/Email';
+import { Box, Container, Typography, Link, TextField, Button, Grid, useTheme, Snackbar, Alert } from '@mui/material';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { LanguageContext } from '../App';
 
@@ -79,7 +75,7 @@ function Footer() {
               {/* 官方群二维码 */}
               <Box>
                 <img 
-                  src="/images/123.png" 
+                  src="/images/wechat_2025-06-20_202513_860.png" 
                   alt="官方群二维码" 
                   style={{ 
                     width: '120px', 
@@ -95,7 +91,7 @@ function Footer() {
             </Box>
             
             {/* 邮件订阅框 */}
-            <Box sx={{ display: 'flex', mt: { xs: 3, md: 4 }, mb: { xs: 2, md: 3 } }}>
+            <Box sx={{ display: 'none', mt: { xs: 3, md: 4 }, mb: { xs: 2, md: 3 } }}>
               <TextField
                 placeholder={language === 'zh' ? "输入您的邮箱" : "Enter your email"}
                 variant="outlined"

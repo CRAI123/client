@@ -1,0 +1,74 @@
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        .center-image {
+            display: flex;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="center-image">
+        <h1>
+            <p>
+                <img id="imge" src="https://img.zcool.cn/community/01a9e157060d416ac7257948f7c1c8.gif" style="width: 300;height: 300;" alt="">
+            </p>
+            <p>
+                <button style="width: 100%;height: 40;font-size: 13px;" id="changeImageBtn">点击获取登录二维码</button>
+            </p>
+        </h1>
+    </div>
+    <div class="box">
+    </div>
+</body>
+</html>
+
+<script type="text/javascript" src="jquery.min.js"></script>
+<script>
+    //获取二维码
+    var jsonObj;
+    $('#changeImageBtn').click(function () {
+        $.ajax({
+            type: "post",
+            url: "wxlogin.php",
+            success: function (res) {
+                // console.log(jsonObj.imgurl)
+                $('#imge').attr('src', res);
+                $('#imge').attr('height', 300);
+                $('#imge').attr('width', 300);
+            }
+        });
+        // 开始轮询扫码状态
+        let TimeOut = 0;
+        let checklogin = setInterval('CheckStatus()', 1000);
+    });
+
+    // 查询扫码状态的方法
+    function CheckStatus() {
+        $.ajax({
+            type: "POST",
+            url: "rscenes.php?",
+            success: function (data) {
+                // console.log(jsonObj.scenes)
+                data = JSON.parse(data);
+                // console.log(jsonObj.scene)
+                if (data.code === 200) {
+                    $('#changeImageBtn').text('唯一标识：'+data.openid);
+                }
+                else if (data.code === 201) {
+                    $('#changeImageBtn').text('请使用微信扫描二维码');
+                }
+                else if (data.code === 202) {//扫码成功，请确认登录
+                    $('#changeImageBtn').text('扫码成功，请点击确认授权登录');
+                }
+                else if (data.code === 203) {
+                    // $('#changeImageBtn').text('服务器发生错误');
+                }
+            },
+            error: function (data) {
+                console.log('服务器发生错误')
+            }
+        });
+    }
+</script>

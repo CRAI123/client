@@ -1,7 +1,8 @@
-import React, { useContext } from 'react';
+import React, { useContext, useEffect } from 'react';
 import { Box, Typography, Grid, Card, CardContent, CardMedia, Dialog, DialogTitle, DialogContent, DialogActions, Button, CardActionArea, Chip, Stack, IconButton } from '@mui/material';
 import { LanguageContext } from '../App';
 import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import LinkIcon from '@mui/icons-material/Link';
 import StarIcon from '@mui/icons-material/Star';
@@ -10,6 +11,14 @@ import StarBorderIcon from '@mui/icons-material/StarBorder';
 function Portfolio() {
   const { language } = useContext(LanguageContext);
   const { currentUser, isAuthenticated, addFavorite, removeFavorite } = useAuth();
+  const navigate = useNavigate();
+
+  // 检查用户是否已登录，如果未登录则重定向到登录页面
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/login');
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleToggleFavorite = (event, projectId) => {
     event.stopPropagation();
