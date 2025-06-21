@@ -3,13 +3,29 @@ import {
   Container, Paper, Typography, TextField, Button, Box, Tabs, Tab,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
-  Snackbar, Alert, Chip, MenuItem, Select, FormControl, InputLabel
+  Snackbar, Alert, MenuItem, Select, FormControl, InputLabel
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon, Lock as LockIcon, Logout as LogoutIcon } from '@mui/icons-material';
 import { LanguageContext } from '../App';
 
-// 生成VIP密钥的函数
+
+
+// 固定的10个VIP密钥（可重复使用）
+const FIXED_VIP_KEYS = [
+  'ABCD-1234-EFGH-5678',
+  'IJKL-9012-MNOP-3456',
+  'QRST-7890-UVWX-1234',
+  'YZAB-5678-CDEF-9012',
+  'GHIJ-3456-KLMN-7890',
+  'OPQR-1234-STUV-5678',
+  'WXYZ-9012-ABCD-3456',
+  'EFGH-7890-IJKL-1234',
+  'MNOP-5678-QRST-9012',
+  'UVWX-3456-YZAB-7890'
+];
+
+// 生成VIP密钥的函数（用于动态生成）
 const generateVipKey = () => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let result = '';
@@ -20,17 +36,35 @@ const generateVipKey = () => {
   return result;
 };
 
-// 生成10个VIP密钥
+// 生成固定的10个VIP密钥
+const generateFixedVipKeys = () => {
+  const keys = [];
+  for (let i = 0; i < FIXED_VIP_KEYS.length; i++) {
+    keys.push({
+      id: i + 1,
+      key: FIXED_VIP_KEYS[i],
+      status: 'permanent', // 永久有效状态
+      createdDate: new Date().toISOString().split('T')[0],
+      usedBy: null,
+      usedDate: null,
+      usageCount: 0 // 使用次数统计
+    });
+  }
+  return keys;
+};
+
+// 生成10个随机VIP密钥（原有功能保留）
 const generateVipKeys = () => {
   const keys = [];
   for (let i = 0; i < 10; i++) {
     keys.push({
-      id: i + 1,
+      id: Date.now() + i, // 使用时间戳避免ID冲突
       key: generateVipKey(),
       status: 'active',
       createdDate: new Date().toISOString().split('T')[0],
       usedBy: null,
-      usedDate: null
+      usedDate: null,
+      usageCount: 0
     });
   }
   return keys;
@@ -38,31 +72,12 @@ const generateVipKeys = () => {
 
 // 初始数据 - 实际应用中应从后端API获取
 const initialData = {
-  articles: [
-    { id: 1, title: '文章1', category: 'tech', content: '这是技术文章内容', date: '2023-01-01' },
-    { id: 2, title: '文章2', category: 'life', content: '这是生活文章内容', date: '2023-01-02' },
-  ],
-  projects: [
-    { id: 1, name: '项目1', description: '这是项目1的描述', technologies: 'React, Node.js', github: 'https://github.com/example/project1' },
-    { id: 2, name: '项目2', description: '这是项目2的描述', technologies: 'Vue, Express', github: 'https://github.com/example/project2' },
-  ],
-  resources: [
-    { id: 1, title: '资源1', category: 'article', description: '这是一篇技术文章', link: 'https://example.com/article1' },
-    { id: 2, title: '资源2', category: 'note', description: '这是一篇学习笔记', link: 'https://example.com/note1' },
-  ],
-  contacts: [],
-  subscriptions: [],
-  vipKeys: generateVipKeys()
+  vipKeys: generateFixedVipKeys() // 使用固定密钥
 };
 
 // localStorage存储键
 const STORAGE_KEYS = {
-  articles: 'articleData',
-  projects: 'projectData',
-  resources: 'resourceData',
-  contacts: 'contactMessages',
-  subscriptions: 'subscriptionEmails',
-  vipKeys: 'vipKeys'
+  vipKeys: 'vipKeyData'
 };
 
 function Admin() {
@@ -115,13 +130,12 @@ function Admin() {
         }
       });
       
-      // 确保VIP密钥数据存在
-      if (!loadedData.vipKeys || loadedData.vipKeys.length === 0) {
-        loadedData.vipKeys = initialData.vipKeys;
+        // 强制重新初始化固定VIP密钥数据
+        loadedData.vipKeys = generateFixedVipKeys();
         localStorage.setItem(STORAGE_KEYS.vipKeys, JSON.stringify(loadedData.vipKeys));
-      }
-      
-      setData(loadedData);
+        
+        setData(loadedData);
+        console.log('VIP密钥已初始化:', loadedData.vipKeys);
       
       // 设置实时监听localStorage变化
       const handleStorageChange = (e) => {
@@ -159,11 +173,7 @@ function Admin() {
     setCurrentTab(newValue);
   };
   
-  // 处理表单输入变化
-  const handleFormChange = (event) => {
-    const { name, value } = event.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
+
   
   // 打开添加对话框
   const handleOpenAddDialog = () => {
@@ -208,7 +218,8 @@ function Admin() {
           ...newItem,
           key: generateVipKey(),
           status: 'active',
-          createdDate: new Date().toISOString().split('T')[0]
+          createdDate: new Date().toISOString().split('T')[0],
+          usageCount: 0
         };
       }
       
@@ -221,6 +232,13 @@ function Admin() {
     
     // 更新localStorage
     localStorage.setItem(STORAGE_KEYS[dataType], JSON.stringify(newData[dataType]));
+    
+    // 手动触发storage事件，确保同一标签页内的组件能够同步
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: STORAGE_KEYS[dataType],
+      newValue: localStorage.getItem(STORAGE_KEYS[dataType]),
+      storageArea: localStorage
+    }));
     
     // 在实际应用中，这里应该调用API将数据同步到后端
     console.log('保存后的数据:', newData);
@@ -245,6 +263,56 @@ function Admin() {
   const showSnackbar = (message, severity) => {
     setSnackbar({ open: true, message, severity });
   };
+
+  // 批量生成VIP密钥
+  const handleBatchGenerateKeys = () => {
+    // 重置为固定的10个密钥
+    const fixedKeys = generateFixedVipKeys();
+    const newData = { ...data };
+    
+    newData.vipKeys = fixedKeys;
+    setData(newData);
+    
+    // 更新localStorage
+    localStorage.setItem(STORAGE_KEYS.vipKeys, JSON.stringify(newData.vipKeys));
+    
+    // 手动触发storage事件，确保同一标签页内的组件能够同步
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: 'vipKeyData',
+      newValue: localStorage.getItem('vipKeyData'),
+      storageArea: localStorage
+    }));
+    
+    showSnackbar(language === 'zh' ? '已重置为10个固定密钥（可重复使用）' : 'Reset to 10 fixed keys (reusable)', 'success');
+  };
+  
+  // 添加生成随机密钥的函数（可选功能）
+  const handleGenerateRandomKeys = () => {
+    const newKeys = generateVipKeys();
+    const newData = { ...data };
+    const existingKeys = newData.vipKeys || [];
+    const maxId = existingKeys.length > 0 ? Math.max(...existingKeys.map(k => k.id)) : 0;
+    
+    const keysWithNewIds = newKeys.map((key, index) => ({
+      ...key,
+      id: maxId + index + 1
+    }));
+    
+    newData.vipKeys = [...existingKeys, ...keysWithNewIds];
+    setData(newData);
+    
+    // 更新localStorage
+    localStorage.setItem(STORAGE_KEYS.vipKeys, JSON.stringify(newData.vipKeys));
+    
+    // 手动触发storage事件，确保同一标签页内的组件能够同步
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: 'vipKeyData',
+      newValue: localStorage.getItem('vipKeyData'),
+      storageArea: localStorage
+    }));
+    
+    showSnackbar(language === 'zh' ? '成功生成10个随机密钥' : 'Successfully generated 10 random keys', 'success');
+  };
   
   // 关闭提示消息
   const handleCloseSnackbar = () => {
@@ -252,551 +320,129 @@ function Admin() {
   };
   
   // 根据选项卡索引获取数据类型
-  const getDataTypeByTabIndex = (index) => {
-    switch(index) {
-      case 0: return 'articles';
-      case 1: return 'projects';
-      case 2: return 'resources';
-      case 3: return 'contacts';
-      case 4: return 'subscriptions';
-      case 5: return 'vipKeys';
-      default: return 'articles';
-    }
+  const getDataTypeByTabIndex = (tabIndex) => {
+    return 'vipKeys';
   };
   
   // 渲染表单字段
   const renderFormFields = () => {
-    switch(currentTab) {
-      case 0: // 文章表单
-        return (
-          <>
-            <TextField
-              name="title"
-              label={language === 'zh' ? '标题' : 'Title'}
-              fullWidth
-              margin="normal"
-              value={formData.title || ''}
-              onChange={handleFormChange}
-            />
-            <FormControl fullWidth margin="normal">
-              <InputLabel>{language === 'zh' ? '分类' : 'Category'}</InputLabel>
-              <Select
-                name="category"
-                value={formData.category || ''}
-                onChange={handleFormChange}
-                label={language === 'zh' ? '分类' : 'Category'}
-              >
-                <MenuItem value="tech">{language === 'zh' ? '技术' : 'Technology'}</MenuItem>
-                <MenuItem value="life">{language === 'zh' ? '生活' : 'Life'}</MenuItem>
-                <MenuItem value="other">{language === 'zh' ? '其他' : 'Other'}</MenuItem>
-              </Select>
-            </FormControl>
-            <TextField
-              name="content"
-              label={language === 'zh' ? '内容' : 'Content'}
-              fullWidth
-              multiline
-              rows={4}
-              margin="normal"
-              value={formData.content || ''}
-              onChange={handleFormChange}
-            />
-            <TextField
-              name="date"
-              label={language === 'zh' ? '日期' : 'Date'}
-              type="date"
-              fullWidth
-              margin="normal"
-              value={formData.date || ''}
-              onChange={handleFormChange}
-              InputLabelProps={{ shrink: true }}
-            />
-          </>
-        );
-      case 1: // 项目表单
-        return (
-          <>
-            <TextField
-              name="name"
-              label={language === 'zh' ? '项目名称' : 'Project Name'}
-              fullWidth
-              margin="normal"
-              value={formData.name || ''}
-              onChange={handleFormChange}
-            />
-            <TextField
-              name="description"
-              label={language === 'zh' ? '描述' : 'Description'}
-              fullWidth
-              multiline
-              rows={3}
-              margin="normal"
-              value={formData.description || ''}
-              onChange={handleFormChange}
-            />
-            <TextField
-              name="technologies"
-              label={language === 'zh' ? '技术栈' : 'Technologies'}
-              fullWidth
-              margin="normal"
-              value={formData.technologies || ''}
-              onChange={handleFormChange}
-            />
-            <TextField
-              name="github"
-              label={language === 'zh' ? 'GitHub链接' : 'GitHub Link'}
-              fullWidth
-              margin="normal"
-              value={formData.github || ''}
-              onChange={handleFormChange}
-            />
-          </>
-        );
-      case 2: // 资源表单
-        return (
-          <>
-            <TextField
-              name="title"
-              label={language === 'zh' ? '标题' : 'Title'}
-              fullWidth
-              margin="normal"
-              value={formData.title || ''}
-              onChange={handleFormChange}
-            />
-            <FormControl fullWidth margin="normal">
-              <InputLabel>{language === 'zh' ? '分类' : 'Category'}</InputLabel>
-              <Select
-                name="category"
-                value={formData.category || ''}
-                onChange={handleFormChange}
-                label={language === 'zh' ? '分类' : 'Category'}
-              >
-                <MenuItem value="article">{language === 'zh' ? '技术文章' : 'Technical Articles'}</MenuItem>
-                <MenuItem value="note">{language === 'zh' ? '学习笔记' : 'Study Notes'}</MenuItem>
-                <MenuItem value="tool">{language === 'zh' ? '工具' : 'Tools'}</MenuItem>
-              </Select>
-            </FormControl>
-            <TextField
-              name="description"
-              label={language === 'zh' ? '描述' : 'Description'}
-              fullWidth
-              multiline
-              rows={3}
-              margin="normal"
-              value={formData.description || ''}
-              onChange={handleFormChange}
-            />
-            <TextField
-              name="link"
-              label={language === 'zh' ? '链接' : 'Link'}
-              fullWidth
-              margin="normal"
-              value={formData.link || ''}
-              onChange={handleFormChange}
-            />
-          </>
-        );
-      case 3: // 联系表单
-        return (
-          <>
-            <TextField
-              name="name"
-              label={language === 'zh' ? '姓名' : 'Name'}
-              fullWidth
-              margin="normal"
-              value={formData.name || ''}
-              onChange={handleFormChange}
-            />
-            <TextField
-              name="email"
-              label={language === 'zh' ? '邮箱' : 'Email'}
-              fullWidth
-              margin="normal"
-              value={formData.email || ''}
-              onChange={handleFormChange}
-            />
-            <TextField
-              name="message"
-              label={language === 'zh' ? '消息' : 'Message'}
-              fullWidth
-              multiline
-              rows={4}
-              margin="normal"
-              value={formData.message || ''}
-              onChange={handleFormChange}
-            />
-            <FormControl fullWidth margin="normal">
-              <InputLabel>{language === 'zh' ? '状态' : 'Status'}</InputLabel>
-              <Select
-                name="status"
-                value={formData.status || 'unread'}
-                onChange={handleFormChange}
-                label={language === 'zh' ? '状态' : 'Status'}
-              >
-                <MenuItem value="unread">{language === 'zh' ? '未读' : 'Unread'}</MenuItem>
-                <MenuItem value="read">{language === 'zh' ? '已读' : 'Read'}</MenuItem>
-                <MenuItem value="replied">{language === 'zh' ? '已回复' : 'Replied'}</MenuItem>
-              </Select>
-            </FormControl>
-          </>
-        );
-      case 4: // 订阅表单
-        return (
-          <>
-            <TextField
-              name="email"
-              label={language === 'zh' ? '邮箱' : 'Email'}
-              fullWidth
-              margin="normal"
-              value={formData.email || ''}
-              onChange={handleFormChange}
-            />
-            <FormControl fullWidth margin="normal">
-              <InputLabel>{language === 'zh' ? '状态' : 'Status'}</InputLabel>
-              <Select
-                name="status"
-                value={formData.status || 'active'}
-                onChange={handleFormChange}
-                label={language === 'zh' ? '状态' : 'Status'}
-              >
-                <MenuItem value="active">{language === 'zh' ? '活跃' : 'Active'}</MenuItem>
-                <MenuItem value="inactive">{language === 'zh' ? '不活跃' : 'Inactive'}</MenuItem>
-              </Select>
-            </FormControl>
-          </>
-        );
-      case 5: // VIP密钥表单
-        return (
-          <>
-            <TextField
-              name="key"
-              label={language === 'zh' ? '密钥' : 'Key'}
-              fullWidth
-              margin="normal"
-              value={formData.key || ''}
-              onChange={handleFormChange}
-              disabled={!editItem} // 新增时禁用，编辑时可用
-              helperText={!editItem ? (language === 'zh' ? '新密钥将自动生成' : 'New key will be auto-generated') : ''}
-            />
-            <FormControl fullWidth margin="normal">
-              <InputLabel>{language === 'zh' ? '状态' : 'Status'}</InputLabel>
-              <Select
-                name="status"
-                value={formData.status || 'active'}
-                onChange={handleFormChange}
-                label={language === 'zh' ? '状态' : 'Status'}
-              >
-                <MenuItem value="active">{language === 'zh' ? '可用' : 'Active'}</MenuItem>
-                <MenuItem value="used">{language === 'zh' ? '已使用' : 'Used'}</MenuItem>
-                <MenuItem value="expired">{language === 'zh' ? '已过期' : 'Expired'}</MenuItem>
-              </Select>
-            </FormControl>
-            <TextField
-              name="usedBy"
-              label={language === 'zh' ? '使用者' : 'Used By'}
-              fullWidth
-              margin="normal"
-              value={formData.usedBy || ''}
-              onChange={handleFormChange}
-            />
-            <TextField
-              name="usedDate"
-              label={language === 'zh' ? '使用日期' : 'Used Date'}
-              type="date"
-              fullWidth
-              variant="outlined"
-              value={formData.usedDate || ''}
-              onChange={handleFormChange}
-              InputLabelProps={{ shrink: true }}
-            />
-          </>
-        );
-      default:
-        return null;
-    }
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+        <TextField
+          label={language === 'zh' ? '密钥' : 'Key'}
+          value={formData.key || ''}
+          onChange={(e) => setFormData({ ...formData, key: e.target.value })}
+          fullWidth
+          required
+          disabled={!editItem} // 新增时自动生成，编辑时可修改
+        />
+        <FormControl fullWidth required>
+          <InputLabel>{language === 'zh' ? '状态' : 'Status'}</InputLabel>
+          <Select
+            value={formData.status || 'active'}
+            onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+            label={language === 'zh' ? '状态' : 'Status'}
+          >
+            <MenuItem value="permanent">{language === 'zh' ? '永久' : 'Permanent'}</MenuItem>
+            <MenuItem value="active">{language === 'zh' ? '激活' : 'Active'}</MenuItem>
+            <MenuItem value="used">{language === 'zh' ? '已使用' : 'Used'}</MenuItem>
+            <MenuItem value="expired">{language === 'zh' ? '已过期' : 'Expired'}</MenuItem>
+          </Select>
+        </FormControl>
+        <TextField
+          label={language === 'zh' ? '使用者' : 'Used By'}
+          value={formData.usedBy || ''}
+          onChange={(e) => setFormData({ ...formData, usedBy: e.target.value })}
+          fullWidth
+        />
+        <TextField
+          label={language === 'zh' ? '使用日期' : 'Used Date'}
+          type="date"
+          value={formData.usedDate || ''}
+          onChange={(e) => setFormData({ ...formData, usedDate: e.target.value })}
+          fullWidth
+          InputLabelProps={{ shrink: true }}
+        />
+        <TextField
+          label={language === 'zh' ? '使用次数' : 'Usage Count'}
+          type="number"
+          value={formData.usageCount || 0}
+          onChange={(e) => setFormData({ ...formData, usageCount: parseInt(e.target.value) || 0 })}
+          fullWidth
+          inputProps={{ min: 0 }}
+        />
+      </Box>
+    );
   };
 
   const renderDataTable = () => {
     const dataType = getDataTypeByTabIndex(currentTab);
-    const items = data[dataType] || [];
+    const currentData = data[dataType] || [];
     
-    switch(currentTab) {
-      case 0: // 文章表格
-        return (
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>{language === 'zh' ? 'ID' : 'ID'}</TableCell>
-                  <TableCell>{language === 'zh' ? '标题' : 'Title'}</TableCell>
-                  <TableCell>{language === 'zh' ? '分类' : 'Category'}</TableCell>
-                  <TableCell>{language === 'zh' ? '日期' : 'Date'}</TableCell>
-                  <TableCell align="right">{language === 'zh' ? '操作' : 'Actions'}</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {items.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>{item.id}</TableCell>
-                    <TableCell>{item.title}</TableCell>
-                    <TableCell>{item.category}</TableCell>
-                    <TableCell>{item.date}</TableCell>
-                    <TableCell align="right">
-                      <IconButton onClick={() => handleOpenEditDialog(item)} color="primary">
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton onClick={() => handleDelete(item.id)} color="error">
-                        <DeleteIcon />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        );
-      case 1: // 项目表格
-        return (
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>{language === 'zh' ? 'ID' : 'ID'}</TableCell>
-                  <TableCell>{language === 'zh' ? '名称' : 'Name'}</TableCell>
-                  <TableCell>{language === 'zh' ? '描述' : 'Description'}</TableCell>
-                  <TableCell>{language === 'zh' ? '技术栈' : 'Technologies'}</TableCell>
-                  <TableCell align="right">{language === 'zh' ? '操作' : 'Actions'}</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {items.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>{item.id}</TableCell>
-                    <TableCell>{item.name}</TableCell>
-                    <TableCell>{item.description}</TableCell>
-                    <TableCell>{item.technologies}</TableCell>
-                    <TableCell align="right">
-                      <IconButton onClick={() => handleOpenEditDialog(item)} color="primary">
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton onClick={() => handleDelete(item.id)} color="error">
-                        <DeleteIcon />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        );
-      case 2: // 资源表格
-        return (
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>{language === 'zh' ? 'ID' : 'ID'}</TableCell>
-                  <TableCell>{language === 'zh' ? '标题' : 'Title'}</TableCell>
-                  <TableCell>{language === 'zh' ? '分类' : 'Category'}</TableCell>
-                  <TableCell>{language === 'zh' ? '描述' : 'Description'}</TableCell>
-                  <TableCell align="right">{language === 'zh' ? '操作' : 'Actions'}</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {items.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>{item.id}</TableCell>
-                    <TableCell>{item.title}</TableCell>
-                    <TableCell>
-                      {item.category === 'article' ? (language === 'zh' ? '技术文章' : 'Technical Articles') : 
-                       item.category === 'note' ? (language === 'zh' ? '学习笔记' : 'Study Notes') : 
-                       item.category}
-                    </TableCell>
-                    <TableCell>{item.description}</TableCell>
-                    <TableCell align="right">
-                      <IconButton onClick={() => handleOpenEditDialog(item)} color="primary">
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton onClick={() => handleDelete(item.id)} color="error">
-                        <DeleteIcon />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        );
-      case 3: // 联系信息表格
-        return (
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>{language === 'zh' ? '姓名' : 'Name'}</TableCell>
-                  <TableCell>{language === 'zh' ? '邮箱' : 'Email'}</TableCell>
-                  <TableCell>{language === 'zh' ? '消息' : 'Message'}</TableCell>
-                  <TableCell>{language === 'zh' ? '时间' : 'Time'}</TableCell>
-                  <TableCell>{language === 'zh' ? '状态' : 'Status'}</TableCell>
-                  <TableCell align="right">{language === 'zh' ? '操作' : 'Actions'}</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {items.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>{item.name}</TableCell>
-                    <TableCell>{item.email}</TableCell>
-                    <TableCell sx={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {item.message}
-                    </TableCell>
-                    <TableCell>{new Date(item.timestamp).toLocaleString()}</TableCell>
-                    <TableCell>
-                      <Chip 
-                        label={item.status === 'unread' ? (language === 'zh' ? '未读' : 'Unread') : 
-                               item.status === 'read' ? (language === 'zh' ? '已读' : 'Read') : 
-                               (language === 'zh' ? '已回复' : 'Replied')}
-                        color={item.status === 'unread' ? 'error' : 
-                               item.status === 'read' ? 'primary' : 
-                               'success'}
-                        size="small"
-                        variant="outlined"
-                      />
-                    </TableCell>
-                    <TableCell align="right">
-                      <IconButton onClick={() => handleOpenEditDialog(item)} color="primary">
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton onClick={() => handleDelete(item.id)} color="error">
-                        <DeleteIcon />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        );
-      case 4: // 邮箱订阅表格
-        return (
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>{language === 'zh' ? 'ID' : 'ID'}</TableCell>
-                  <TableCell>{language === 'zh' ? '邮箱' : 'Email'}</TableCell>
-                  <TableCell>{language === 'zh' ? '订阅时间' : 'Subscription Time'}</TableCell>
-                  <TableCell>{language === 'zh' ? '状态' : 'Status'}</TableCell>
-                  <TableCell align="right">{language === 'zh' ? '操作' : 'Actions'}</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {items.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>{item.id}</TableCell>
-                    <TableCell>{item.email}</TableCell>
-                    <TableCell>{new Date(item.timestamp).toLocaleString()}</TableCell>
-                    <TableCell>
-                      <Chip 
-                        label={item.status === 'active' ? (language === 'zh' ? '活跃' : 'Active') : 
-                               (language === 'zh' ? '不活跃' : 'Inactive')}
-                        color={item.status === 'active' ? 'success' : 'default'}
-                        size="small"
-                        variant="outlined"
-                      />
-                    </TableCell>
-                    <TableCell align="right">
-                      <IconButton onClick={() => handleOpenEditDialog(item)} color="primary">
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton onClick={() => handleDelete(item.id)} color="error">
-                        <DeleteIcon />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        );
-      case 5: // VIP密钥表格
-        return (
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>{language === 'zh' ? 'ID' : 'ID'}</TableCell>
-                  <TableCell>{language === 'zh' ? '密钥' : 'Key'}</TableCell>
-                  <TableCell>{language === 'zh' ? '状态' : 'Status'}</TableCell>
-                  <TableCell>{language === 'zh' ? '使用者' : 'Used By'}</TableCell>
-                  <TableCell>{language === 'zh' ? '使用日期' : 'Used Date'}</TableCell>
-                  <TableCell>{language === 'zh' ? '创建日期' : 'Created Date'}</TableCell>
-                  <TableCell align="right">{language === 'zh' ? '操作' : 'Actions'}</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {items.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>{item.id}</TableCell>
-                    <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.9rem' }}>{item.key}</TableCell>
-                    <TableCell>
-                      <Chip 
-                        label={item.status === 'active' ? (language === 'zh' ? '可用' : 'Active') : 
-                               item.status === 'used' ? (language === 'zh' ? '已使用' : 'Used') : 
-                               (language === 'zh' ? '已过期' : 'Expired')}
-                        color={item.status === 'active' ? 'success' : 
-                               item.status === 'used' ? 'primary' : 
-                               'error'}
-                        size="small"
-                        variant="outlined"
-                      />
-                    </TableCell>
-                    <TableCell>{item.usedBy || '-'}</TableCell>
-                    <TableCell>{item.usedDate ? new Date(item.usedDate).toLocaleDateString() : '-'}</TableCell>
-                    <TableCell>{item.createdDate ? new Date(item.createdDate).toLocaleDateString() : '-'}</TableCell>
-                    <TableCell align="right">
-                      <IconButton onClick={() => handleOpenEditDialog(item)} color="primary">
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton onClick={() => handleDelete(item.id)} color="error">
-                        <DeleteIcon />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        );
-      default:
-        return null;
-    }
+    return (
+      <TableContainer component={Paper} sx={{ mt: 2 }}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>{language === 'zh' ? 'ID' : 'ID'}</TableCell>
+              <TableCell>{language === 'zh' ? '密钥' : 'Key'}</TableCell>
+              <TableCell>{language === 'zh' ? '状态' : 'Status'}</TableCell>
+              <TableCell>{language === 'zh' ? '使用者' : 'Used By'}</TableCell>
+              <TableCell>{language === 'zh' ? '使用日期' : 'Used Date'}</TableCell>
+              <TableCell>{language === 'zh' ? '使用次数' : 'Usage Count'}</TableCell>
+              <TableCell>{language === 'zh' ? '创建日期' : 'Created Date'}</TableCell>
+              <TableCell>{language === 'zh' ? '操作' : 'Actions'}</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {currentData.map((item) => (
+              <TableRow key={item.id}>
+                <TableCell>{item.id}</TableCell>
+                <TableCell sx={{ fontFamily: 'monospace' }}>{item.key}</TableCell>
+                <TableCell>
+                  <Box
+                    sx={{
+                      px: 1,
+                      py: 0.5,
+                      borderRadius: 1,
+                      fontSize: '0.75rem',
+                      fontWeight: 'bold',
+                      textAlign: 'center',
+                      color: 'white',
+                      backgroundColor: 
+                        item.status === 'permanent' ? '#9c27b0' :
+                        item.status === 'active' ? '#4caf50' :
+                        item.status === 'used' ? '#ff9800' : '#f44336'
+                    }}
+                  >
+                    {item.status === 'permanent' ? (language === 'zh' ? '永久' : 'Permanent') :
+                     item.status === 'active' ? (language === 'zh' ? '激活' : 'Active') :
+                     item.status === 'used' ? (language === 'zh' ? '已使用' : 'Used') :
+                     (language === 'zh' ? '已过期' : 'Expired')}
+                  </Box>
+                </TableCell>
+                <TableCell>{item.usedBy || '-'}</TableCell>
+                <TableCell>{item.usedDate || '-'}</TableCell>
+                <TableCell>{item.usageCount || 0}</TableCell>
+                <TableCell>{item.createdDate}</TableCell>
+                <TableCell>
+                  <IconButton onClick={() => handleOpenEditDialog(item)} color="primary">
+                    <EditIcon />
+                  </IconButton>
+                  <IconButton onClick={() => handleDelete(item.id)} color="error">
+                    <DeleteIcon />
+                  </IconButton>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    );
   };
 
-  // 批量生成VIP密钥
-  const handleBatchGenerateKeys = () => {
-    const newKeys = [];
-    const currentMaxId = Math.max(...data.vipKeys.map(key => key.id), 0);
-    
-    for (let i = 0; i < 10; i++) {
-      newKeys.push({
-        id: currentMaxId + i + 1,
-        key: generateVipKey(),
-        status: 'active',
-        createdDate: new Date().toISOString().split('T')[0],
-        usedBy: null,
-        usedDate: null
-      });
-    }
-    
-    const newData = {
-      ...data,
-      vipKeys: [...data.vipKeys, ...newKeys]
-    };
-    
-    setData(newData);
-    localStorage.setItem(STORAGE_KEYS.vipKeys, JSON.stringify(newData.vipKeys));
-    showSnackbar(language === 'zh' ? '成功生成10个VIP密钥' : 'Successfully generated 10 VIP keys', 'success');
-  };
+
+
 
   // 主渲染函数
   if (!isLoggedIn) {
@@ -861,12 +507,7 @@ function Admin() {
       
       <Paper sx={{ width: '100%', mb: 2 }}>
         <Tabs value={currentTab} onChange={handleTabChange} aria-label="admin tabs">
-          <Tab label={language === 'zh' ? '文章' : 'Articles'} />
-          <Tab label={language === 'zh' ? '项目' : 'Projects'} />
-          <Tab label={language === 'zh' ? '资源' : 'Resources'} />
-          <Tab label={language === 'zh' ? '联系' : 'Contacts'} />
-          <Tab label={language === 'zh' ? '订阅' : 'Subscriptions'} />
-          <Tab label={language === 'zh' ? 'VIP密钥管理' : 'VIP Keys'} />
+          <Tab label={language === 'zh' ? 'VIP密钥' : 'VIP Keys'} />
         </Tabs>
         
         <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -877,16 +518,20 @@ function Admin() {
           >
             {language === 'zh' ? '添加' : 'Add'}
           </Button>
-          
-          {currentTab === 5 && (
-            <Button
-              variant="outlined"
-              onClick={handleBatchGenerateKeys}
-              sx={{ ml: 2 }}
-            >
-              {language === 'zh' ? '批量生成10个密钥' : 'Generate 10 Keys'}
-            </Button>
-          )}
+          <Button
+            variant="outlined"
+            onClick={handleBatchGenerateKeys}
+            sx={{ ml: 2 }}
+          >
+            {language === 'zh' ? '重置固定密钥' : 'Reset Fixed Keys'}
+          </Button>
+          <Button
+            variant="outlined"
+            onClick={handleGenerateRandomKeys}
+            sx={{ ml: 2 }}
+          >
+            {language === 'zh' ? '生成随机密钥' : 'Generate Random Keys'}
+          </Button>
         </Box>
         
         {renderDataTable()}
