@@ -1,16 +1,40 @@
-import React, { useState, useContext, useEffect } from 'react';
-import { 
-  Box, Typography, TextField, Button, Paper, Table, TableBody, 
-  TableCell, TableContainer, TableHead, TableRow, IconButton, 
-  Dialog, DialogActions, DialogContent, DialogTitle, 
-  FormControl, InputLabel, Select, MenuItem, Alert, Snackbar,
-  Tabs, Tab, useTheme, Chip
+import React, { useState, useEffect, useContext } from 'react';
+import {
+  Container, Paper, Typography, TextField, Button, Box, Tabs, Tab,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+  IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
+  Snackbar, Alert, Chip, MenuItem, Select, FormControl, InputLabel
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
+import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon, Lock as LockIcon, Logout as LogoutIcon } from '@mui/icons-material';
 import { LanguageContext } from '../App';
-import DeleteIcon from '@mui/icons-material/Delete';
-import EditIcon from '@mui/icons-material/Edit';
-import AddIcon from '@mui/icons-material/Add';
-import LockIcon from '@mui/icons-material/Lock';
+
+// 生成VIP密钥的函数
+const generateVipKey = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let result = '';
+  for (let i = 0; i < 16; i++) {
+    if (i > 0 && i % 4 === 0) result += '-';
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+};
+
+// 生成10个VIP密钥
+const generateVipKeys = () => {
+  const keys = [];
+  for (let i = 0; i < 10; i++) {
+    keys.push({
+      id: i + 1,
+      key: generateVipKey(),
+      status: 'active',
+      createdDate: new Date().toISOString().split('T')[0],
+      usedBy: null,
+      usedDate: null
+    });
+  }
+  return keys;
+};
 
 // 初始数据 - 实际应用中应从后端API获取
 const initialData = {
@@ -19,14 +43,16 @@ const initialData = {
     { id: 2, title: '文章2', category: 'life', content: '这是生活文章内容', date: '2023-01-02' },
   ],
   projects: [
-    { id: 1, name: '项目1', description: '项目1描述', technologies: 'React, Node.js', imageUrl: '/images/project1.jpg' },
-    { id: 2, name: '项目2', description: '项目2描述', technologies: 'Vue, Express', imageUrl: '/images/project2.jpg' },
+    { id: 1, name: '项目1', description: '这是项目1的描述', technologies: 'React, Node.js', github: 'https://github.com/example/project1' },
+    { id: 2, name: '项目2', description: '这是项目2的描述', technologies: 'Vue, Express', github: 'https://github.com/example/project2' },
   ],
   resources: [
     { id: 1, title: '资源1', category: 'article', description: '这是一篇技术文章', link: 'https://example.com/article1' },
     { id: 2, title: '资源2', category: 'note', description: '这是一篇学习笔记', link: 'https://example.com/note1' },
   ],
-  contacts: []
+  contacts: [],
+  subscriptions: [],
+  vipKeys: generateVipKeys()
 };
 
 // localStorage存储键
@@ -35,7 +61,8 @@ const STORAGE_KEYS = {
   projects: 'projectData',
   resources: 'resourceData',
   contacts: 'contactMessages',
-  subscriptions: 'subscriptionEmails'
+  subscriptions: 'subscriptionEmails',
+  vipKeys: 'vipKeys'
 };
 
 function Admin() {
@@ -72,95 +99,91 @@ function Admin() {
     setIsLoggedIn(false);
     setUsername('');
     setPassword('');
+    setLoginError(false);
   };
   
-  // 处理选项卡变更
-  const handleTabChange = (event, newValue) => {
-    setCurrentTab(newValue);
-    resetFormData(newValue);
-  };
-  
-  // 根据当前选项卡重置表单数据
-  const resetFormData = (tabIndex) => {
-    switch(tabIndex) {
-      case 0: // 文章
-        setFormData({ title: '', category: 'tech', content: '', date: new Date().toISOString().split('T')[0] });
-        break;
-      case 1: // 项目
-        setFormData({ name: '', description: '', technologies: '', imageUrl: '' });
-        break;
-      case 2: // 资源
-        setFormData({ title: '', category: 'article', description: '', link: '' });
-        break;
-      case 3: // 联系信息
-        setFormData({ name: '', email: '', message: '', status: 'unread' });
-        break;
-      case 4: // 邮箱订阅
-        setFormData({ email: '', status: 'active' });
-        break;
-      default:
-        setFormData({});
-    }
-  };
-  
-  // 初始化表单数据
+  // 初始化数据加载和实时监听
   useEffect(() => {
-    resetFormData(currentTab);
+    try {
+      // 从localStorage加载所有数据
+      const loadedData = { ...initialData };
+      
+      Object.keys(STORAGE_KEYS).forEach(dataType => {
+        const stored = localStorage.getItem(STORAGE_KEYS[dataType]);
+        if (stored) {
+          loadedData[dataType] = JSON.parse(stored);
+        }
+      });
+      
+      // 确保VIP密钥数据存在
+      if (!loadedData.vipKeys || loadedData.vipKeys.length === 0) {
+        loadedData.vipKeys = initialData.vipKeys;
+        localStorage.setItem(STORAGE_KEYS.vipKeys, JSON.stringify(loadedData.vipKeys));
+      }
+      
+      setData(loadedData);
+      
+      // 设置实时监听localStorage变化
+      const handleStorageChange = (e) => {
+        if (Object.values(STORAGE_KEYS).includes(e.key)) {
+          const dataType = Object.keys(STORAGE_KEYS).find(key => STORAGE_KEYS[key] === e.key);
+          if (dataType && e.newValue) {
+            setData(prevData => ({
+              ...prevData,
+              [dataType]: JSON.parse(e.newValue)
+            }));
+          }
+        }
+      };
+      
+      window.addEventListener('storage', handleStorageChange);
+      
+      return () => {
+        window.removeEventListener('storage', handleStorageChange);
+      };
+    } catch (error) {
+      console.error('数据加载失败:', error);
+      showSnackbar(language === 'zh' ? '数据加载失败' : 'Failed to load data', 'error');
+    }
+  }, [language]);
+  
+  // 切换选项卡时重置表单
+  useEffect(() => {
+    setFormData({});
+    setEditItem(null);
+    setOpenDialog(false);
   }, [currentTab]);
   
-  // 处理表单输入变更
-  const handleFormChange = (e) => {
-    const { name, value } = e.target;
+  // 处理选项卡切换
+  const handleTabChange = (event, newValue) => {
+    setCurrentTab(newValue);
+  };
+  
+  // 处理表单输入变化
+  const handleFormChange = (event) => {
+    const { name, value } = event.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
   
   // 打开添加对话框
   const handleOpenAddDialog = () => {
     setEditItem(null);
-    resetFormData(currentTab);
+    setFormData({});
     setOpenDialog(true);
   };
   
   // 打开编辑对话框
   const handleOpenEditDialog = (item) => {
     setEditItem(item);
-    
-    // 根据当前选项卡设置表单数据
-    switch(currentTab) {
-      case 0: // 文章
-        setFormData({ 
-          title: item.title, 
-          category: item.category, 
-          content: item.content, 
-          date: item.date 
-        });
-        break;
-      case 1: // 项目
-        setFormData({ 
-          name: item.name, 
-          description: item.description, 
-          technologies: item.technologies, 
-          imageUrl: item.imageUrl 
-        });
-        break;
-      case 2: // 资源
-        setFormData({ 
-          title: item.title, 
-          category: item.category, 
-          description: item.description, 
-          link: item.link 
-        });
-        break;
-      default:
-        break;
-    }
-    
+    setFormData(item);
     setOpenDialog(true);
   };
   
   // 关闭对话框
   const handleCloseDialog = () => {
     setOpenDialog(false);
+    setEditItem(null);
+    setFormData({});
   };
   
   // 保存数据
@@ -176,8 +199,19 @@ function Admin() {
       showSnackbar(language === 'zh' ? '更新成功' : 'Updated successfully', 'success');
     } else {
       // 添加新项
-      const newId = Math.max(0, ...data[dataType].map(item => item.id)) + 1;
-      const newItem = { id: newId, ...formData };
+      const newId = Math.max(...data[dataType].map(item => item.id), 0) + 1;
+      let newItem = { id: newId, ...formData };
+      
+      // 如果是VIP密钥，自动生成密钥
+      if (dataType === 'vipKeys') {
+        newItem = {
+          ...newItem,
+          key: generateVipKey(),
+          status: 'active',
+          createdDate: new Date().toISOString().split('T')[0]
+        };
+      }
+      
       newData[dataType] = [...data[dataType], newItem];
       showSnackbar(language === 'zh' ? '添加成功' : 'Added successfully', 'success');
     }
@@ -188,8 +222,8 @@ function Admin() {
     // 更新localStorage
     localStorage.setItem(STORAGE_KEYS[dataType], JSON.stringify(newData[dataType]));
     
-    // 在实际应用中，这里应该调用API将数据保存到后端
-    console.log('保存的数据:', newData);
+    // 在实际应用中，这里应该调用API将数据同步到后端
+    console.log('保存后的数据:', newData);
   };
   
   // 删除数据
@@ -225,118 +259,11 @@ function Admin() {
       case 2: return 'resources';
       case 3: return 'contacts';
       case 4: return 'subscriptions';
+      case 5: return 'vipKeys';
       default: return 'articles';
     }
   };
   
-  // 初始化数据加载和实时监听
-  useEffect(() => {
-    try {
-      // 从localStorage加载所有数据
-      const loadAllData = () => {
-        // 加载文章数据
-        const articlesData = JSON.parse(localStorage.getItem(STORAGE_KEYS.articles) || JSON.stringify(initialData.articles));
-        
-        // 加载项目数据
-        const projectsData = JSON.parse(localStorage.getItem(STORAGE_KEYS.projects) || JSON.stringify(initialData.projects));
-        
-        // 加载资源数据
-        const resourcesData = JSON.parse(localStorage.getItem(STORAGE_KEYS.resources) || JSON.stringify(initialData.resources));
-        
-        // 加载联系信息数据
-        const contactsData = JSON.parse(localStorage.getItem(STORAGE_KEYS.contacts) || '[]');
-        // 按时间戳降序排序，最新的消息显示在前面
-        const sortedContactsData = contactsData.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-        
-        // 加载邮箱订阅数据
-        const subscriptionsData = JSON.parse(localStorage.getItem(STORAGE_KEYS.subscriptions) || '[]');
-        // 按时间戳降序排序，最新的订阅显示在前面
-        const sortedSubscriptionsData = subscriptionsData.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-        
-        // 更新数据状态
-        setData({
-          articles: articlesData,
-          projects: projectsData,
-          resources: resourcesData,
-          contacts: sortedContactsData,
-          subscriptions: sortedSubscriptionsData
-        });
-      };
-      
-      // 初始加载数据
-      loadAllData();
-      
-      // 设置storage事件监听器，当localStorage变化时更新数据
-      const handleStorageChange = (event) => {
-        const key = event.key;
-        
-        // 根据变化的存储键更新相应的数据
-        if (key === STORAGE_KEYS.articles) {
-          const articlesData = JSON.parse(localStorage.getItem(STORAGE_KEYS.articles) || '[]');
-          setData(prevData => ({ ...prevData, articles: articlesData }));
-          if (currentTab === 0) {
-            showSnackbar(language === 'zh' ? '文章数据已更新' : 'Article data updated', 'info');
-          }
-        } else if (key === STORAGE_KEYS.projects) {
-          const projectsData = JSON.parse(localStorage.getItem(STORAGE_KEYS.projects) || '[]');
-          setData(prevData => ({ ...prevData, projects: projectsData }));
-          if (currentTab === 1) {
-            showSnackbar(language === 'zh' ? '项目数据已更新' : 'Project data updated', 'info');
-          }
-        } else if (key === STORAGE_KEYS.resources) {
-          const resourcesData = JSON.parse(localStorage.getItem(STORAGE_KEYS.resources) || '[]');
-          setData(prevData => ({ ...prevData, resources: resourcesData }));
-          if (currentTab === 2) {
-            showSnackbar(language === 'zh' ? '资源数据已更新' : 'Resource data updated', 'info');
-          }
-        } else if (key === STORAGE_KEYS.contacts) {
-          const contactsData = JSON.parse(localStorage.getItem(STORAGE_KEYS.contacts) || '[]');
-          // 按时间戳降序排序
-          const sortedData = contactsData.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-          setData(prevData => ({ ...prevData, contacts: sortedData }));
-          if (currentTab === 3) {
-            showSnackbar(language === 'zh' ? '收到新的联系信息' : 'New contact message received', 'info');
-          }
-        } else if (key === STORAGE_KEYS.subscriptions) {
-          const subscriptionsData = JSON.parse(localStorage.getItem(STORAGE_KEYS.subscriptions) || '[]');
-          // 按时间戳降序排序
-          const sortedData = subscriptionsData.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-          setData(prevData => ({ ...prevData, subscriptions: sortedData }));
-          if (currentTab === 4) {
-            showSnackbar(language === 'zh' ? '收到新的邮箱订阅' : 'New email subscription received', 'info');
-          }
-        }
-      };
-      
-      // 添加事件监听
-      window.addEventListener('storage', handleStorageChange);
-      
-      // 清理函数
-      return () => {
-        window.removeEventListener('storage', handleStorageChange);
-      };
-    } catch (error) {
-      console.error('加载数据时出错:', error);
-    }
-  }, [currentTab, language]);
-  
-  // 初始化时将数据保存到localStorage
-  useEffect(() => {
-    // 如果localStorage中没有数据，则初始化
-    if (!localStorage.getItem(STORAGE_KEYS.articles)) {
-      localStorage.setItem(STORAGE_KEYS.articles, JSON.stringify(initialData.articles));
-    }
-    if (!localStorage.getItem(STORAGE_KEYS.projects)) {
-      localStorage.setItem(STORAGE_KEYS.projects, JSON.stringify(initialData.projects));
-    }
-    if (!localStorage.getItem(STORAGE_KEYS.resources)) {
-      localStorage.setItem(STORAGE_KEYS.resources, JSON.stringify(initialData.resources));
-    }
-    if (!localStorage.getItem(STORAGE_KEYS.subscriptions)) {
-      localStorage.setItem(STORAGE_KEYS.subscriptions, JSON.stringify([]));
-    }
-  }, []);
-
   // 渲染表单字段
   const renderFormFields = () => {
     switch(currentTab) {
@@ -344,22 +271,20 @@ function Admin() {
         return (
           <>
             <TextField
-              margin="dense"
               name="title"
               label={language === 'zh' ? '标题' : 'Title'}
-              type="text"
               fullWidth
-              variant="outlined"
+              margin="normal"
               value={formData.title || ''}
               onChange={handleFormChange}
             />
-            <FormControl fullWidth margin="dense">
+            <FormControl fullWidth margin="normal">
               <InputLabel>{language === 'zh' ? '分类' : 'Category'}</InputLabel>
               <Select
                 name="category"
-                value={formData.category || 'tech'}
-                label={language === 'zh' ? '分类' : 'Category'}
+                value={formData.category || ''}
                 onChange={handleFormChange}
+                label={language === 'zh' ? '分类' : 'Category'}
               >
                 <MenuItem value="tech">{language === 'zh' ? '技术' : 'Technology'}</MenuItem>
                 <MenuItem value="life">{language === 'zh' ? '生活' : 'Life'}</MenuItem>
@@ -367,24 +292,21 @@ function Admin() {
               </Select>
             </FormControl>
             <TextField
-              margin="dense"
               name="content"
               label={language === 'zh' ? '内容' : 'Content'}
-              type="text"
               fullWidth
               multiline
               rows={4}
-              variant="outlined"
+              margin="normal"
               value={formData.content || ''}
               onChange={handleFormChange}
             />
             <TextField
-              margin="dense"
               name="date"
               label={language === 'zh' ? '日期' : 'Date'}
               type="date"
               fullWidth
-              variant="outlined"
+              margin="normal"
               value={formData.date || ''}
               onChange={handleFormChange}
               InputLabelProps={{ shrink: true }}
@@ -395,156 +317,121 @@ function Admin() {
         return (
           <>
             <TextField
-              margin="dense"
               name="name"
-              label={language === 'zh' ? '名称' : 'Name'}
-              type="text"
+              label={language === 'zh' ? '项目名称' : 'Project Name'}
               fullWidth
-              variant="outlined"
+              margin="normal"
               value={formData.name || ''}
               onChange={handleFormChange}
             />
             <TextField
-              margin="dense"
               name="description"
               label={language === 'zh' ? '描述' : 'Description'}
-              type="text"
               fullWidth
               multiline
               rows={3}
-              variant="outlined"
+              margin="normal"
               value={formData.description || ''}
               onChange={handleFormChange}
             />
             <TextField
-              margin="dense"
               name="technologies"
               label={language === 'zh' ? '技术栈' : 'Technologies'}
-              type="text"
               fullWidth
-              variant="outlined"
+              margin="normal"
               value={formData.technologies || ''}
               onChange={handleFormChange}
             />
-            <input
-              accept="image/*"
-              style={{ display: 'none' }}
-              id="project-image-upload"
-              type="file"
-              onChange={(e) => {
-                if (e.target.files && e.target.files[0]) {
-                  const file = e.target.files[0];
-                  const reader = new FileReader();
-                  reader.onload = (event) => {
-                    setFormData(prev => ({ ...prev, imageUrl: event.target.result }));
-                  };
-                  reader.readAsDataURL(file);
-                }
-              }}
+            <TextField
+              name="github"
+              label={language === 'zh' ? 'GitHub链接' : 'GitHub Link'}
+              fullWidth
+              margin="normal"
+              value={formData.github || ''}
+              onChange={handleFormChange}
             />
-            <label htmlFor="project-image-upload">
-              <Button variant="contained" component="span" fullWidth sx={{ mt: 1 }}>
-                {language === 'zh' ? '上传图片' : 'Upload Image'}
-              </Button>
-            </label>
-            {formData.imageUrl && (
-              <Box sx={{ mt: 2, textAlign: 'center' }}>
-                <img src={formData.imageUrl} alt="Preview" style={{ maxWidth: '100%', maxHeight: '200px' }} />
-              </Box>
-            )}
           </>
         );
       case 2: // 资源表单
         return (
           <>
             <TextField
-              margin="dense"
               name="title"
               label={language === 'zh' ? '标题' : 'Title'}
-              type="text"
               fullWidth
-              variant="outlined"
+              margin="normal"
               value={formData.title || ''}
               onChange={handleFormChange}
             />
-            <FormControl fullWidth margin="dense">
+            <FormControl fullWidth margin="normal">
               <InputLabel>{language === 'zh' ? '分类' : 'Category'}</InputLabel>
               <Select
                 name="category"
-                value={formData.category || 'article'}
-                label={language === 'zh' ? '分类' : 'Category'}
+                value={formData.category || ''}
                 onChange={handleFormChange}
+                label={language === 'zh' ? '分类' : 'Category'}
               >
                 <MenuItem value="article">{language === 'zh' ? '技术文章' : 'Technical Articles'}</MenuItem>
                 <MenuItem value="note">{language === 'zh' ? '学习笔记' : 'Study Notes'}</MenuItem>
+                <MenuItem value="tool">{language === 'zh' ? '工具' : 'Tools'}</MenuItem>
               </Select>
             </FormControl>
             <TextField
-              margin="dense"
               name="description"
               label={language === 'zh' ? '描述' : 'Description'}
-              type="text"
               fullWidth
               multiline
-              rows={2}
-              variant="outlined"
+              rows={3}
+              margin="normal"
               value={formData.description || ''}
               onChange={handleFormChange}
             />
             <TextField
-              margin="dense"
               name="link"
               label={language === 'zh' ? '链接' : 'Link'}
-              type="text"
               fullWidth
-              variant="outlined"
+              margin="normal"
               value={formData.link || ''}
               onChange={handleFormChange}
             />
           </>
         );
-      case 3: // 联系信息表单
+      case 3: // 联系表单
         return (
           <>
             <TextField
-              margin="dense"
               name="name"
               label={language === 'zh' ? '姓名' : 'Name'}
-              type="text"
               fullWidth
-              variant="outlined"
+              margin="normal"
               value={formData.name || ''}
               onChange={handleFormChange}
             />
             <TextField
-              margin="dense"
               name="email"
               label={language === 'zh' ? '邮箱' : 'Email'}
-              type="email"
               fullWidth
-              variant="outlined"
+              margin="normal"
               value={formData.email || ''}
               onChange={handleFormChange}
             />
             <TextField
-              margin="dense"
               name="message"
               label={language === 'zh' ? '消息' : 'Message'}
-              type="text"
               fullWidth
               multiline
               rows={4}
-              variant="outlined"
+              margin="normal"
               value={formData.message || ''}
               onChange={handleFormChange}
             />
-            <FormControl fullWidth margin="dense">
+            <FormControl fullWidth margin="normal">
               <InputLabel>{language === 'zh' ? '状态' : 'Status'}</InputLabel>
               <Select
                 name="status"
                 value={formData.status || 'unread'}
-                label={language === 'zh' ? '状态' : 'Status'}
                 onChange={handleFormChange}
+                label={language === 'zh' ? '状态' : 'Status'}
               >
                 <MenuItem value="unread">{language === 'zh' ? '未读' : 'Unread'}</MenuItem>
                 <MenuItem value="read">{language === 'zh' ? '已读' : 'Read'}</MenuItem>
@@ -553,26 +440,24 @@ function Admin() {
             </FormControl>
           </>
         );
-      case 4: // 邮箱订阅表单
+      case 4: // 订阅表单
         return (
           <>
             <TextField
-              margin="dense"
               name="email"
               label={language === 'zh' ? '邮箱' : 'Email'}
-              type="email"
               fullWidth
-              variant="outlined"
+              margin="normal"
               value={formData.email || ''}
               onChange={handleFormChange}
             />
-            <FormControl fullWidth margin="dense">
+            <FormControl fullWidth margin="normal">
               <InputLabel>{language === 'zh' ? '状态' : 'Status'}</InputLabel>
               <Select
                 name="status"
                 value={formData.status || 'active'}
-                label={language === 'zh' ? '状态' : 'Status'}
                 onChange={handleFormChange}
+                label={language === 'zh' ? '状态' : 'Status'}
               >
                 <MenuItem value="active">{language === 'zh' ? '活跃' : 'Active'}</MenuItem>
                 <MenuItem value="inactive">{language === 'zh' ? '不活跃' : 'Inactive'}</MenuItem>
@@ -580,12 +465,57 @@ function Admin() {
             </FormControl>
           </>
         );
+      case 5: // VIP密钥表单
+        return (
+          <>
+            <TextField
+              name="key"
+              label={language === 'zh' ? '密钥' : 'Key'}
+              fullWidth
+              margin="normal"
+              value={formData.key || ''}
+              onChange={handleFormChange}
+              disabled={!editItem} // 新增时禁用，编辑时可用
+              helperText={!editItem ? (language === 'zh' ? '新密钥将自动生成' : 'New key will be auto-generated') : ''}
+            />
+            <FormControl fullWidth margin="normal">
+              <InputLabel>{language === 'zh' ? '状态' : 'Status'}</InputLabel>
+              <Select
+                name="status"
+                value={formData.status || 'active'}
+                onChange={handleFormChange}
+                label={language === 'zh' ? '状态' : 'Status'}
+              >
+                <MenuItem value="active">{language === 'zh' ? '可用' : 'Active'}</MenuItem>
+                <MenuItem value="used">{language === 'zh' ? '已使用' : 'Used'}</MenuItem>
+                <MenuItem value="expired">{language === 'zh' ? '已过期' : 'Expired'}</MenuItem>
+              </Select>
+            </FormControl>
+            <TextField
+              name="usedBy"
+              label={language === 'zh' ? '使用者' : 'Used By'}
+              fullWidth
+              margin="normal"
+              value={formData.usedBy || ''}
+              onChange={handleFormChange}
+            />
+            <TextField
+              name="usedDate"
+              label={language === 'zh' ? '使用日期' : 'Used Date'}
+              type="date"
+              fullWidth
+              variant="outlined"
+              value={formData.usedDate || ''}
+              onChange={handleFormChange}
+              InputLabelProps={{ shrink: true }}
+            />
+          </>
+        );
       default:
         return null;
     }
   };
-  
-  // 渲染数据表格
+
   const renderDataTable = () => {
     const dataType = getDataTypeByTabIndex(currentTab);
     const items = data[dataType] || [];
@@ -788,197 +718,213 @@ function Admin() {
             </Table>
           </TableContainer>
         );
+      case 5: // VIP密钥表格
+        return (
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>{language === 'zh' ? 'ID' : 'ID'}</TableCell>
+                  <TableCell>{language === 'zh' ? '密钥' : 'Key'}</TableCell>
+                  <TableCell>{language === 'zh' ? '状态' : 'Status'}</TableCell>
+                  <TableCell>{language === 'zh' ? '使用者' : 'Used By'}</TableCell>
+                  <TableCell>{language === 'zh' ? '使用日期' : 'Used Date'}</TableCell>
+                  <TableCell>{language === 'zh' ? '创建日期' : 'Created Date'}</TableCell>
+                  <TableCell align="right">{language === 'zh' ? '操作' : 'Actions'}</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {items.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell>{item.id}</TableCell>
+                    <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.9rem' }}>{item.key}</TableCell>
+                    <TableCell>
+                      <Chip 
+                        label={item.status === 'active' ? (language === 'zh' ? '可用' : 'Active') : 
+                               item.status === 'used' ? (language === 'zh' ? '已使用' : 'Used') : 
+                               (language === 'zh' ? '已过期' : 'Expired')}
+                        color={item.status === 'active' ? 'success' : 
+                               item.status === 'used' ? 'primary' : 
+                               'error'}
+                        size="small"
+                        variant="outlined"
+                      />
+                    </TableCell>
+                    <TableCell>{item.usedBy || '-'}</TableCell>
+                    <TableCell>{item.usedDate ? new Date(item.usedDate).toLocaleDateString() : '-'}</TableCell>
+                    <TableCell>{item.createdDate ? new Date(item.createdDate).toLocaleDateString() : '-'}</TableCell>
+                    <TableCell align="right">
+                      <IconButton onClick={() => handleOpenEditDialog(item)} color="primary">
+                        <EditIcon />
+                      </IconButton>
+                      <IconButton onClick={() => handleDelete(item.id)} color="error">
+                        <DeleteIcon />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        );
       default:
         return null;
     }
   };
-  
-  return (
-    <Box sx={{ mt: 4 }}>
-      {!isLoggedIn ? (
-        // 登录界面
-        <Paper 
-          elevation={3} 
-          sx={{ 
-            p: 4, 
-            maxWidth: 400, 
-            mx: 'auto',
-            background: 'rgba(18, 18, 18, 0.8)',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(0, 229, 255, 0.2)',
-            borderRadius: '8px'
-          }}
-        >
-          <Box sx={{ textAlign: 'center', mb: 3 }}>
-            <LockIcon sx={{ fontSize: 40, color: theme.palette.primary.main, mb: 1 }} />
-            <Typography 
-              variant="h5" 
-              component="h1" 
-              sx={{ 
-                fontFamily: '"Orbitron", sans-serif',
-                background: 'linear-gradient(90deg, #00e5ff, #33eaff)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-              }}
-            >
-              {language === 'zh' ? '管理员登录' : 'Admin Login'}
-            </Typography>
-          </Box>
-          
+
+  // 批量生成VIP密钥
+  const handleBatchGenerateKeys = () => {
+    const newKeys = [];
+    const currentMaxId = Math.max(...data.vipKeys.map(key => key.id), 0);
+    
+    for (let i = 0; i < 10; i++) {
+      newKeys.push({
+        id: currentMaxId + i + 1,
+        key: generateVipKey(),
+        status: 'active',
+        createdDate: new Date().toISOString().split('T')[0],
+        usedBy: null,
+        usedDate: null
+      });
+    }
+    
+    const newData = {
+      ...data,
+      vipKeys: [...data.vipKeys, ...newKeys]
+    };
+    
+    setData(newData);
+    localStorage.setItem(STORAGE_KEYS.vipKeys, JSON.stringify(newData.vipKeys));
+    showSnackbar(language === 'zh' ? '成功生成10个VIP密钥' : 'Successfully generated 10 VIP keys', 'success');
+  };
+
+  // 主渲染函数
+  if (!isLoggedIn) {
+    return (
+      <Container maxWidth="sm" sx={{ mt: 8 }}>
+        <Paper elevation={3} sx={{ p: 4, textAlign: 'center' }}>
+          <LockIcon sx={{ fontSize: 60, color: theme.palette.primary.main, mb: 2 }} />
+          <Typography variant="h4" gutterBottom>
+            {language === 'zh' ? '管理员登录' : 'Admin Login'}
+          </Typography>
           {loginError && (
             <Alert severity="error" sx={{ mb: 2 }}>
               {language === 'zh' ? '用户名或密码错误' : 'Invalid username or password'}
             </Alert>
           )}
-          
           <TextField
-            margin="normal"
-            required
             fullWidth
-            id="username"
             label={language === 'zh' ? '用户名' : 'Username'}
-            name="username"
-            autoComplete="username"
-            autoFocus
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            sx={{ mb: 2 }}
+            margin="normal"
+            variant="outlined"
           />
           <TextField
-            margin="normal"
-            required
             fullWidth
-            name="password"
             label={language === 'zh' ? '密码' : 'Password'}
             type="password"
-            id="password"
-            autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            sx={{ mb: 3 }}
+            margin="normal"
+            variant="outlined"
+            onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
           />
           <Button
             fullWidth
             variant="contained"
             onClick={handleLogin}
-            sx={{ 
-              py: 1.2,
-              borderRadius: '4px',
-              boxShadow: '0 0 15px rgba(0, 229, 255, 0.5)'
-            }}
+            sx={{ mt: 3, mb: 2 }}
+            size="large"
           >
             {language === 'zh' ? '登录' : 'Login'}
           </Button>
         </Paper>
-      ) : (
-        // 管理界面
-        <Box>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-            <Typography 
-              variant="h4" 
-              component="h1"
-              sx={{ 
-                fontFamily: '"Orbitron", sans-serif',
-                background: 'linear-gradient(90deg, #00e5ff, #33eaff)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-              }}
+      </Container>
+    );
+  }
+
+  return (
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4" component="h1">
+          {language === 'zh' ? '管理控制台' : 'Admin Console'}
+        </Typography>
+        <Button
+          variant="outlined"
+          onClick={handleLogout}
+          startIcon={<LogoutIcon />}
+        >
+          {language === 'zh' ? '退出登录' : 'Logout'}
+        </Button>
+      </Box>
+      
+      <Paper sx={{ width: '100%', mb: 2 }}>
+        <Tabs value={currentTab} onChange={handleTabChange} aria-label="admin tabs">
+          <Tab label={language === 'zh' ? '文章' : 'Articles'} />
+          <Tab label={language === 'zh' ? '项目' : 'Projects'} />
+          <Tab label={language === 'zh' ? '资源' : 'Resources'} />
+          <Tab label={language === 'zh' ? '联系' : 'Contacts'} />
+          <Tab label={language === 'zh' ? '订阅' : 'Subscriptions'} />
+          <Tab label={language === 'zh' ? 'VIP密钥管理' : 'VIP Keys'} />
+        </Tabs>
+        
+        <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={handleOpenAddDialog}
+          >
+            {language === 'zh' ? '添加' : 'Add'}
+          </Button>
+          
+          {currentTab === 5 && (
+            <Button
+              variant="outlined"
+              onClick={handleBatchGenerateKeys}
+              sx={{ ml: 2 }}
             >
-              {language === 'zh' ? '管理控制台' : 'Admin Console'}
-            </Typography>
-            <Button 
-              variant="outlined" 
-              color="primary" 
-              onClick={handleLogout}
-              sx={{ 
-                borderColor: theme.palette.primary.main,
-                '&:hover': {
-                  boxShadow: '0 0 10px rgba(0, 229, 255, 0.3)'
-                }
-              }}
-            >
-              {language === 'zh' ? '退出登录' : 'Logout'}
+              {language === 'zh' ? '批量生成10个密钥' : 'Generate 10 Keys'}
             </Button>
-          </Box>
-          
-          <Paper 
-            elevation={3} 
-            sx={{ 
-              p: 3, 
-              mb: 4,
-              background: 'rgba(18, 18, 18, 0.8)',
-              backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(0, 229, 255, 0.2)',
-              borderRadius: '8px'
-            }}
-          >
-            <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-              <Tabs 
-                value={currentTab} 
-                onChange={handleTabChange} 
-                variant="fullWidth"
-                textColor="primary"
-                indicatorColor="primary"
-              >
-                <Tab label={language === 'zh' ? '文章管理' : 'Articles'} />
-                <Tab label={language === 'zh' ? '项目管理' : 'Projects'} />
-                <Tab label={language === 'zh' ? '资源管理' : 'Resources'} />
-                <Tab label={language === 'zh' ? '联系信息' : 'Contacts'} />
-                <Tab label={language === 'zh' ? '邮箱订阅' : 'Subscriptions'} />
-              </Tabs>
-            </Box>
-            
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-              <Button 
-                variant="contained" 
-                startIcon={<AddIcon />} 
-                onClick={handleOpenAddDialog}
-                sx={{ 
-                  borderRadius: '4px',
-                  boxShadow: '0 0 10px rgba(0, 229, 255, 0.3)'
-                }}
-              >
-                {language === 'zh' ? '添加' : 'Add'}
-              </Button>
-            </Box>
-            
-            {renderDataTable()}
-          </Paper>
-          
-          {/* 添加/编辑对话框 */}
-          <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-            <DialogTitle>
-              {editItem 
-                ? (language === 'zh' ? '编辑' : 'Edit') 
-                : (language === 'zh' ? '添加' : 'Add')}
-            </DialogTitle>
-            <DialogContent>
-              {renderFormFields()}
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={handleCloseDialog}>
-                {language === 'zh' ? '取消' : 'Cancel'}
-              </Button>
-              <Button onClick={handleSave} variant="contained" color="primary">
-                {language === 'zh' ? '保存' : 'Save'}
-              </Button>
-            </DialogActions>
-          </Dialog>
-          
-          {/* 提示消息 */}
-          <Snackbar 
-            open={snackbar.open} 
-            autoHideDuration={3000} 
-            onClose={handleCloseSnackbar}
-            anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-          >
-            <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
-              {snackbar.message}
-            </Alert>
-          </Snackbar>
+          )}
         </Box>
-      )}
-    </Box>
+        
+        {renderDataTable()}
+      </Paper>
+
+      {/* 添加/编辑对话框 */}
+      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
+        <DialogTitle>
+          {editItem ? 
+            (language === 'zh' ? '编辑' : 'Edit') : 
+            (language === 'zh' ? '添加' : 'Add')
+          }
+        </DialogTitle>
+        <DialogContent>
+          {renderFormFields()}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog}>
+            {language === 'zh' ? '取消' : 'Cancel'}
+          </Button>
+          <Button onClick={handleSave} variant="contained">
+            {language === 'zh' ? '保存' : 'Save'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 提示消息 */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </Container>
   );
 }
 

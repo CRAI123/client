@@ -115,6 +115,7 @@ function UserMenu() {
 // 导航栏组件
 function NavigationBar() {
   const theme = useTheme();
+  const navigate = useNavigate();
   const { language, toggleLanguage } = useContext(LanguageContext);
   
   return (
@@ -135,12 +136,12 @@ function NavigationBar() {
         }}>
           CR Studio
         </Typography>
-        <Button color="primary" href="/" sx={{ mx: 0.8 }}>{language === 'zh' ? '首页' : 'Home'}</Button>
-        <Button color="primary" href="/about" sx={{ mx: 0.8 }}>{language === 'zh' ? '关于我' : 'About'}</Button>
-        <Button color="primary" href="/portfolio" sx={{ mx: 0.8 }}>{language === 'zh' ? '作品集' : 'Portfolio'}</Button>
-        <Button color="primary" href="/resources" sx={{ mx: 0.8 }}>{language === 'zh' ? '资料分享' : 'Resources'}</Button>
-        <Button color="primary" href="/vip-zone" sx={{ mx: 0.8, color: '#FFD700', '&:hover': { backgroundColor: 'rgba(255, 215, 0, 0.1)' } }}>{language === 'zh' ? '会员专区' : 'VIP Zone'}</Button>
-        <Button color="primary" href="/contact" sx={{ mx: 0.8 }}>{language === 'zh' ? '联系方式' : 'Contact'}</Button>
+        <Button color="primary" onClick={() => navigate('/')} sx={{ mx: 0.8 }}>{language === 'zh' ? '首页' : 'Home'}</Button>
+        <Button color="primary" onClick={() => navigate('/about')} sx={{ mx: 0.8 }}>{language === 'zh' ? '关于我' : 'About'}</Button>
+        <Button color="primary" onClick={() => navigate('/portfolio')} sx={{ mx: 0.8 }}>{language === 'zh' ? '作品集' : 'Portfolio'}</Button>
+        <Button color="primary" onClick={() => navigate('/resources')} sx={{ mx: 0.8 }}>{language === 'zh' ? '资料分享' : 'Resources'}</Button>
+        <Button color="primary" onClick={() => navigate('/vip-zone')} sx={{ mx: 0.8, color: '#FFD700', '&:hover': { backgroundColor: 'rgba(255, 215, 0, 0.1)' } }}>{language === 'zh' ? '会员专区' : 'VIP Zone'}</Button>
+        <Button color="primary" onClick={() => navigate('/contact')} sx={{ mx: 0.8 }}>{language === 'zh' ? '联系方式' : 'Contact'}</Button>
         
         <UserMenu />
         
