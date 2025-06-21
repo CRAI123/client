@@ -29,7 +29,7 @@ export default function Resources() {
     article: [
       { 
         id: 1, 
-        title: "ChatGPT-4o + Tripo = 王炸", 
+        title: "ChatGPT + Tripo = 王炸", 
         description: "GPT-4o + Tripo 生成3D手办，从此解放双手\n\n## 目录\n一、ChatGPT 镜像网站\n二、ChatGPT生成人偶图片\n三、tripo生成3D模型\n\n注：可以找作者打印模型哦！\n\n## 详细步骤\n\n### 1. 使用ChatGPT生成创意\n首先，我们需要使用ChatGPT来生成人偶的创意和描述。可以输入类似'设计一个可爱的卡通人偶'的提示词。\n\n### 2. 生成图片\n根据ChatGPT的描述，使用AI图片生成工具创建人偶的2D图像。\n\n### 3. 转换为3D模型\n使用Tripo AI将2D图片转换为3D模型，这个过程通常只需要几分钟。\n\n### 4. 3D打印\n最后，将生成的3D模型文件用于3D打印，制作出实体手办。\n\n这个流程大大简化了传统的手办制作过程，让普通用户也能轻松创作出个性化的3D手办。", 
         link: "https://blog.csdn.net/lcr557hcck/article/details/147165941?fromshare=blogdetail&sharetype=blogdetail&sharerId=147165941&sharerefer=PC&sharesource=lcr557hcck&sharefrom=from_link", 
         category: "article" 
