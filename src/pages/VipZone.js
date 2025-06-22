@@ -26,6 +26,35 @@ function VipZone() {
   const [keyError, setKeyError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  // 监听localStorage变化，确保数据同步
+  const handleStorageChange = (e) => {
+    if (e.key === 'vipKeyData') {
+      console.log('VIP密钥数据已更新，重新加载...');
+      // 如果当前有验证的密钥，重新验证其有效性
+      const currentVerifiedKey = localStorage.getItem('verifiedVipKey');
+      if (currentVerifiedKey) {
+        const newVipKeysData = localStorage.getItem('vipKeyData');
+        if (newVipKeysData) {
+          try {
+            const newVipKeys = JSON.parse(newVipKeysData);
+            const stillValid = newVipKeys.find(key => 
+              key.key === currentVerifiedKey && (key.status === 'active' || key.status === 'permanent')
+            );
+            if (!stillValid) {
+              // 密钥不再有效，重置验证状态
+              localStorage.removeItem('verifiedVipKey');
+              setIsVipVerified(false);
+              setShowKeyDialog(true);
+              setVipKey('');
+            }
+          } catch (error) {
+            console.error('解析VIP密钥数据失败:', error);
+          }
+        }
+      }
+    }
+  };
+
   useEffect(() => {
     if (!isAuthenticated) {
       navigate('/login');
@@ -36,38 +65,7 @@ function VipZone() {
       setIsVipVerified(true);
       setShowKeyDialog(false);
     }
-    
-    // 监听localStorage变化，确保数据同步
-    const handleStorageChange = (e) => {
-      if (e.key === 'vipKeyData') {
-        console.log('VIP密钥数据已更新，重新加载...');
-        // 如果当前有验证的密钥，重新验证其有效性
-        const currentVerifiedKey = localStorage.getItem('verifiedVipKey');
-        if (currentVerifiedKey) {
-          const newVipKeysData = localStorage.getItem('vipKeyData');
-          if (newVipKeysData) {
-            try {
-              const newVipKeys = JSON.parse(newVipKeysData);
-              const stillValid = newVipKeys.find(key => 
-                key.key === currentVerifiedKey && (key.status === 'active' || key.status === 'permanent')
-              );
-              if (!stillValid) {
-                // 密钥不再有效，重置验证状态
-                localStorage.removeItem('verifiedVipKey');
-                setIsVipVerified(false);
-                setShowKeyDialog(true);
-                setVipKey('');
-              }
-            } catch (error) {
-              console.error('解析VIP密钥数据失败:', error);
-            }
-          }
-        }
-      }
-    };
-    
     window.addEventListener('storage', handleStorageChange);
-    
     return () => {
       window.removeEventListener('storage', handleStorageChange);
     };
@@ -138,6 +136,8 @@ function VipZone() {
           newValue: localStorage.getItem('vipKeyData'),
           storageArea: localStorage
         }));
+        // 兼容本标签页，主动触发 handleStorageChange
+        handleStorageChange({ key: 'vipKeyData', newValue: localStorage.getItem('vipKeyData') });
       } else {
         // 提供更详细的错误信息
         const keyExists = vipKeys.find(key => key.key === vipKey.trim());
