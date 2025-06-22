@@ -133,6 +133,11 @@ function VipZone() {
           return key;
         });
         localStorage.setItem('vipKeyData', JSON.stringify(updatedKeys));
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: 'vipKeyData',
+          newValue: localStorage.getItem('vipKeyData'),
+          storageArea: localStorage
+        }));
       } else {
         // 提供更详细的错误信息
         const keyExists = vipKeys.find(key => key.key === vipKey.trim());
