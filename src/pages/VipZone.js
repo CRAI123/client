@@ -317,8 +317,8 @@ function VipZone() {
                   display: 'block'
                 }}>
                   {language === 'zh' 
-                    ? '请扫码找工作人员获取密钥，$1/月'
-                    : 'Scan QR code to contact staff for key, $1/month'}
+                    ? '请扫码找工作人员获取密钥，$1/月  $8/年'
+                    : 'Scan QR code to contact staff for key, $1/month  $8/year'}
                 </Typography>
               </Box>
             </Box>
