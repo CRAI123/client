@@ -34,29 +34,7 @@ export default function Resources() {
         link: "https://blog.csdn.net/lcr557hcck/article/details/147165941?fromshare=blogdetail&sharetype=blogdetail&sharerId=147165941&sharerefer=PC&sharesource=lcr557hcck&sharefrom=from_link", 
         category: "article" 
       },
-      { 
-        id: 2, 
-        title: "React Hooks 最佳实践", 
-        description: "React Hooks 是React 16.8引入的新特性，它让我们能够在函数组件中使用状态和其他React特性。\n\n## 常用Hooks介绍\n\n### useState\n用于在函数组件中添加状态：\n```javascript\nconst [count, setCount] = useState(0);\n```\n\n### useEffect\n用于处理副作用，如数据获取、订阅等：\n```javascript\nuseEffect(() => {\n  // 副作用逻辑\n}, [dependencies]);\n```\n\n### useContext\n用于消费React Context：\n```javascript\nconst value = useContext(MyContext);\n```\n\n## 最佳实践\n\n1. **合理使用依赖数组**：确保useEffect的依赖数组包含所有使用的变量\n2. **避免无限循环**：注意useEffect的依赖项设置\n3. **自定义Hooks**：将复杂逻辑抽取为自定义Hooks\n4. **性能优化**：使用useMemo和useCallback优化性能\n\n通过遵循这些最佳实践，可以写出更加健壮和高效的React应用。", 
-        link: "#", 
-        category: "article" 
-      }
-    ],
-    note: [
-      { 
-        id: 3, 
-        title: "JavaScript ES6+ 新特性总结", 
-        description: "ES6+为JavaScript带来了许多强大的新特性，大大提升了开发效率和代码质量。\n\n## 主要新特性\n\n### 1. 箭头函数\n```javascript\n// 传统函数\nfunction add(a, b) {\n  return a + b;\n}\n\n// 箭头函数\nconst add = (a, b) => a + b;\n```\n\n### 2. 模板字符串\n```javascript\nconst name = 'World';\nconst greeting = `Hello, ${name}!`;\n```\n\n### 3. 解构赋值\n```javascript\n// 数组解构\nconst [a, b] = [1, 2];\n\n// 对象解构\nconst {name, age} = person;\n```\n\n### 4. Promise和async/await\n```javascript\n// Promise\nfetch('/api/data')\n  .then(response => response.json())\n  .then(data => console.log(data));\n\n// async/await\nasync function fetchData() {\n  const response = await fetch('/api/data');\n  const data = await response.json();\n  return data;\n}\n```\n\n### 5. 模块化\n```javascript\n// 导出\nexport const myFunction = () => {};\nexport default MyClass;\n\n// 导入\nimport MyClass, { myFunction } from './module';\n```\n\n这些特性让JavaScript代码更加简洁、可读和易于维护。", 
-        link: "#", 
-        category: "note" 
-      },
-      { 
-        id: 4, 
-        title: "前端性能优化指南", 
-        description: "前端性能优化是提升用户体验的关键，以下是一些实用的优化策略。\n\n## 加载性能优化\n\n### 1. 资源压缩\n- 压缩JavaScript、CSS和HTML文件\n- 使用Gzip或Brotli压缩\n- 优化图片格式和大小\n\n### 2. 缓存策略\n- 设置合适的HTTP缓存头\n- 使用CDN加速静态资源\n- 实施浏览器缓存策略\n\n### 3. 代码分割\n- 使用动态导入实现懒加载\n- 按路由分割代码\n- 提取公共依赖\n\n## 运行时性能优化\n\n### 1. DOM操作优化\n- 减少DOM查询次数\n- 批量更新DOM\n- 使用文档片段\n\n### 2. 事件处理优化\n- 使用事件委托\n- 防抖和节流\n- 及时移除事件监听器\n\n### 3. 内存管理\n- 避免内存泄漏\n- 合理使用闭包\n- 及时清理定时器\n\n## 监控和测量\n\n- 使用Performance API\n- 集成性能监控工具\n- 定期进行性能审计\n\n通过系统性的性能优化，可以显著提升网站的加载速度和用户体验。", 
-        link: "#", 
-        category: "note" 
-      }
+
     ]
   };
   
@@ -73,12 +51,12 @@ export default function Resources() {
           setResources(parsedResources);
         } else {
           // 如果没有存储的数据，使用初始数据
-          setResources(initialResources.article.concat(initialResources.note));
+          setResources(initialResources);
         }
       } catch (error) {
         console.error('加载资源数据时出错:', error);
         // 出错时使用初始数据
-        setResources(initialResources.article.concat(initialResources.note));
+        setResources(initialResources);
       }
     };
     
@@ -152,7 +130,7 @@ export default function Resources() {
     // 将资源按分类分组
     const groupedResources = {};
     
-    resources.forEach(resource => {
+    Object.values(resources).flat().forEach(resource => {
       if (!groupedResources[resource.category]) {
         groupedResources[resource.category] = [];
       }
