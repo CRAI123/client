@@ -17,7 +17,6 @@ import Admin from './pages/Admin';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Profile from './pages/Profile';
-import Database from './pages/Database';
 import Footer from './components/Footer';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import VipZone from './pages/VipZone';
@@ -141,7 +140,6 @@ function NavigationBar() {
         <Button color="primary" onClick={() => navigate('/about')} sx={{ mx: 0.8 }}>{language === 'zh' ? '关于我' : 'About'}</Button>
         <Button color="primary" onClick={() => navigate('/portfolio')} sx={{ mx: 0.8 }}>{language === 'zh' ? '作品集' : 'Portfolio'}</Button>
         <Button color="primary" onClick={() => navigate('/resources')} sx={{ mx: 0.8 }}>{language === 'zh' ? '资料分享' : 'Resources'}</Button>
-        <Button color="primary" onClick={() => navigate('/database')} sx={{ mx: 0.8 }}>{language === 'zh' ? '数据库' : 'Database'}</Button>
         <Button color="primary" onClick={() => navigate('/vip-zone')} sx={{ mx: 0.8, color: '#FFD700', '&:hover': { backgroundColor: 'rgba(255, 215, 0, 0.1)' } }}>{language === 'zh' ? '会员专区' : 'VIP Zone'}</Button>
         <Button color="primary" onClick={() => navigate('/contact')} sx={{ mx: 0.8 }}>{language === 'zh' ? '联系方式' : 'Contact'}</Button>
         
@@ -208,7 +206,6 @@ function App() {
             <Route path="/portfolio" element={<Portfolio />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/resources" element={<Resources />} />
-            <Route path="/database" element={<Database />} />
             <Route path="/article/:category/:id" element={<ArticleDetail />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/login" element={<Login />} />
