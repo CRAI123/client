@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { Box, Typography, Card, CardContent, Grid, Button, Chip, Avatar, Divider, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Alert } from '@mui/material';
+import { Box, Typography, Card, CardContent, Grid, Button, Chip, Avatar, Divider, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Alert, CircularProgress, useTheme } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { LanguageContext } from '../App';
@@ -13,11 +13,15 @@ import SchoolIcon from '@mui/icons-material/School';
 import SupportIcon from '@mui/icons-material/Support';
 import LockIcon from '@mui/icons-material/Lock';
 import VpnKeyIcon from '@mui/icons-material/VpnKey';
+import StorageIcon from '@mui/icons-material/Storage';
+import WarningIcon from '@mui/icons-material/Warning';
+import MemberService from '../db/services/MemberService';
 
 function VipZone() {
   const { language } = useContext(LanguageContext);
   const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
+  const theme = useTheme();
   
   // VIP密钥验证状态
   const [isVipVerified, setIsVipVerified] = useState(false);
@@ -25,6 +29,15 @@ function VipZone() {
   const [vipKey, setVipKey] = useState('');
   const [keyError, setKeyError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  
+  // 数据库服务
+  const [memberService] = useState(() => new MemberService());
+  const [dbInitialized, setDbInitialized] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [memberData, setMemberData] = useState(null);
+  
+  // VIP状态计算
+  const vipStatus = memberData?.vip_status === 'active' || memberData?.vip_status === 'permanent';
 
   // 监听localStorage变化，确保数据同步
   const handleStorageChange = (e) => {
@@ -55,6 +68,48 @@ function VipZone() {
     }
   };
 
+  // 初始化数据库和加载会员数据
+  useEffect(() => {
+    const initializeAndLoadData = async () => {
+      if (!user) return;
+      
+      setLoading(true);
+      try {
+        // 初始化数据库表
+        const initResult = await memberService.initializeTables();
+        if (initResult.success) {
+          setDbInitialized(true);
+          console.log('数据库初始化成功:', initResult.message);
+          if (initResult.serverInfo) {
+            console.log('数据库服务器信息:', initResult.serverInfo);
+          }
+          
+          // 尝试获取会员数据
+          const memberResult = await memberService.getMemberByUsername(user.username || user.email);
+          if (memberResult.success && memberResult.data) {
+            setMemberData(memberResult.data);
+          } else {
+            // 如果会员不存在，创建新会员记录
+            const registerResult = await memberService.registerMember({
+              username: user.username || user.email,
+              email: user.email,
+              password: 'oauth_user' // OAuth用户的占位密码
+            });
+            if (registerResult.success) {
+              setMemberData(registerResult.data);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('初始化失败:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initializeAndLoadData();
+  }, [user, memberService]);
+
   useEffect(() => {
     if (!isAuthenticated) {
       navigate('/login');
@@ -76,78 +131,98 @@ function VipZone() {
   }
 
   // 验证VIP密钥
-  const verifyVipKey = () => {
+  const verifyVipKey = async () => {
     setIsLoading(true);
     setKeyError('');
     
-    // 强制刷新VIP密钥数据，确保使用最新数据
-    const vipKeysData = localStorage.getItem('vipKeyData');
-    if (!vipKeysData) {
-      setKeyError(language === 'zh' ? '系统中没有可用的VIP密钥' : 'No VIP keys available in system');
-      setIsLoading(false);
-      return;
-    }
-    
     try {
-      const vipKeys = JSON.parse(vipKeysData);
-      console.log('当前存储的VIP密钥:', vipKeys);
-      console.log('输入的密钥:', vipKey.trim());
-      
-      // 检查密钥是否存在且状态有效
-      const validKey = vipKeys.find(key => 
-        key.key === vipKey.trim() && (key.status === 'active' || key.status === 'permanent')
-      );
-      
-      console.log('找到的有效密钥:', validKey);
-      
-      if (validKey) {
-        // 密钥验证成功
-        setIsVipVerified(true);
-        setShowKeyDialog(false);
-        localStorage.setItem('verifiedVipKey', vipKey.trim());
+      if (dbInitialized && memberData) {
+        // 使用数据库验证VIP密钥
+        const result = await memberService.activateVipKey(memberData.id, vipKey.trim());
         
-        // 更新密钥使用信息
-        const updatedKeys = vipKeys.map(key => {
-          if (key.key === vipKey.trim()) {
-            if (key.status === 'permanent') {
-              // 永久密钥：只更新使用次数和最后使用信息
-              return {
-                ...key,
-                usedBy: user?.username || 'Unknown',
-                usedDate: new Date().toISOString().split('T')[0],
-                usageCount: (key.usageCount || 0) + 1
-              };
-            } else {
-              // 普通密钥：标记为已使用
-              return {
-                ...key,
-                status: 'used',
-                usedBy: user?.username || 'Unknown',
-                usedDate: new Date().toISOString().split('T')[0],
-                usageCount: (key.usageCount || 0) + 1
-              };
-            }
+        if (result.success) {
+          // 更新会员数据
+          const updatedMemberResult = await memberService.getMemberByUsername(memberData.username);
+          if (updatedMemberResult.success) {
+            setMemberData(updatedMemberResult.data);
           }
-          return key;
-        });
-        localStorage.setItem('vipKeyData', JSON.stringify(updatedKeys));
-        window.dispatchEvent(new StorageEvent('storage', {
-          key: 'vipKeyData',
-          newValue: localStorage.getItem('vipKeyData'),
-          storageArea: localStorage
-        }));
-        // 兼容本标签页，主动触发 handleStorageChange
-        handleStorageChange({ key: 'vipKeyData', newValue: localStorage.getItem('vipKeyData') });
-      } else {
-        // 提供更详细的错误信息
-        const keyExists = vipKeys.find(key => key.key === vipKey.trim());
-        if (keyExists) {
-          setKeyError(language === 'zh' ? `密钥状态无效: ${keyExists.status}` : `Invalid key status: ${keyExists.status}`);
+          
+          setIsVipVerified(true);
+          setShowKeyDialog(false);
+          localStorage.setItem('verifiedVipKey', vipKey.trim());
         } else {
-          setKeyError(language === 'zh' ? '密钥不存在或格式错误' : 'Key does not exist or format error');
+          setKeyError(result.error || (language === 'zh' ? '无效的VIP密钥' : 'Invalid VIP key'));
+        }
+      } else {
+        // 回退到localStorage验证（如果数据库不可用）
+        const vipKeysData = localStorage.getItem('vipKeyData');
+        if (!vipKeysData) {
+          setKeyError(language === 'zh' ? '系统中没有可用的VIP密钥' : 'No VIP keys available in system');
+          setIsLoading(false);
+          return;
+        }
+        
+        const vipKeys = JSON.parse(vipKeysData);
+        console.log('当前存储的VIP密钥:', vipKeys);
+        console.log('输入的密钥:', vipKey.trim());
+        
+        // 检查密钥是否存在且状态有效
+        const validKey = vipKeys.find(key => 
+          key.key === vipKey.trim() && (key.status === 'active' || key.status === 'permanent')
+        );
+        
+        console.log('找到的有效密钥:', validKey);
+        
+        if (validKey) {
+          // 密钥验证成功
+          setIsVipVerified(true);
+          setShowKeyDialog(false);
+          localStorage.setItem('verifiedVipKey', vipKey.trim());
+          
+          // 更新密钥使用信息
+          const updatedKeys = vipKeys.map(key => {
+            if (key.key === vipKey.trim()) {
+              if (key.status === 'permanent') {
+                // 永久密钥：只更新使用次数和最后使用信息
+                return {
+                  ...key,
+                  usedBy: user?.username || 'Unknown',
+                  usedDate: new Date().toISOString().split('T')[0],
+                  usageCount: (key.usageCount || 0) + 1
+                };
+              } else {
+                // 普通密钥：标记为已使用
+                return {
+                  ...key,
+                  status: 'used',
+                  usedBy: user?.username || 'Unknown',
+                  usedDate: new Date().toISOString().split('T')[0],
+                  usageCount: (key.usageCount || 0) + 1
+                };
+              }
+            }
+            return key;
+          });
+          localStorage.setItem('vipKeyData', JSON.stringify(updatedKeys));
+          window.dispatchEvent(new StorageEvent('storage', {
+            key: 'vipKeyData',
+            newValue: localStorage.getItem('vipKeyData'),
+            storageArea: localStorage
+          }));
+          // 兼容本标签页，主动触发 handleStorageChange
+          handleStorageChange({ key: 'vipKeyData', newValue: localStorage.getItem('vipKeyData') });
+        } else {
+          // 提供更详细的错误信息
+          const keyExists = vipKeys.find(key => key.key === vipKey.trim());
+          if (keyExists) {
+            setKeyError(language === 'zh' ? `密钥状态无效: ${keyExists.status}` : `Invalid key status: ${keyExists.status}`);
+          } else {
+            setKeyError(language === 'zh' ? '密钥不存在或格式错误' : 'Key does not exist or format error');
+          }
         }
       }
     } catch (error) {
+      console.error('VIP密钥验证失败:', error);
       setKeyError(language === 'zh' ? '验证过程中出现错误' : 'Error occurred during verification');
     }
     
@@ -443,6 +518,132 @@ function VipZone() {
   return (
     <Box sx={{ py: 4 }}>
       {/* 头部欢迎区域 */}
+      <Grid container spacing={3} sx={{ mb: 6 }}>
+        {/* VIP状态卡片 */}
+        <Grid item xs={12} md={6}>
+          <Card sx={{ 
+            background: vipStatus ? 
+              'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)' : 
+              'linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%)',
+            color: vipStatus ? '#000' : theme.palette.text.primary,
+            transition: 'all 0.3s ease'
+          }}>
+            <CardContent sx={{ textAlign: 'center', py: 4 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mb: 2 }}>
+                <StarIcon sx={{ fontSize: 60, mr: 1, color: vipStatus ? '#000' : '#ccc' }} />
+                {loading && <CircularProgress size={20} />}
+              </Box>
+              <Typography variant="h4" gutterBottom fontWeight="bold">
+                {vipStatus ? 
+                  (language === 'zh' ? 'VIP会员' : 'VIP Member') : 
+                  (language === 'zh' ? '普通用户' : 'Regular User')
+                }
+              </Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mb: 2 }}>
+                <Chip 
+                  label={vipStatus ? 
+                    (language === 'zh' ? '已激活' : 'Activated') : 
+                    (language === 'zh' ? '未激活' : 'Not Activated')
+                  }
+                  color={vipStatus ? 'success' : 'default'}
+                  sx={{ fontSize: '1rem', px: 2, py: 1 }}
+                />
+                <Chip 
+                  icon={<StorageIcon />}
+                  label={memberService ? memberService.getStorageType() : 'LocalStorage'}
+                  color={dbInitialized ? 'primary' : 'warning'}
+                  size="small"
+                  title={dbInitialized ? 
+                    (language === 'zh' ? '使用数据库存储' : 'Using Database Storage') :
+                    (language === 'zh' ? '使用本地存储' : 'Using Local Storage')
+                  }
+                />
+              </Box>
+              {memberData && (
+                <Typography variant="body2" sx={{ mt: 1, opacity: 0.8 }}>
+                  {language === 'zh' ? '会员ID' : 'Member ID'}: {memberData.id}
+                </Typography>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+        
+        {/* 会员信息卡片 */}
+        <Grid item xs={12} md={6}>
+          <Card sx={{ 
+            background: 'linear-gradient(135deg, rgba(78, 205, 196, 0.1) 0%, rgba(69, 183, 209, 0.1) 100%)',
+            border: '1px solid rgba(78, 205, 196, 0.3)',
+            height: '100%'
+          }}>
+            <CardContent sx={{ py: 4 }}>
+              <Typography variant="h5" gutterBottom fontWeight="bold" sx={{ textAlign: 'center', mb: 3 }}>
+                {language === 'zh' ? '会员信息' : 'Member Info'}
+              </Typography>
+              
+              {memberData ? (
+                <Box sx={{ space: 2 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      {language === 'zh' ? '用户名' : 'Username'}:
+                    </Typography>
+                    <Typography variant="body2" fontWeight="bold">
+                      {memberData.username}
+                    </Typography>
+                  </Box>
+                  
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      {language === 'zh' ? '邮箱' : 'Email'}:
+                    </Typography>
+                    <Typography variant="body2" fontWeight="bold">
+                      {memberData.email}
+                    </Typography>
+                  </Box>
+                  
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      {language === 'zh' ? '注册时间' : 'Registered'}:
+                    </Typography>
+                    <Typography variant="body2" fontWeight="bold">
+                      {new Date(memberData.created_at).toLocaleDateString()}
+                    </Typography>
+                  </Box>
+                  
+                  {memberData.vip_activated_at && (
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        {language === 'zh' ? 'VIP激活时间' : 'VIP Activated'}:
+                      </Typography>
+                      <Typography variant="body2" fontWeight="bold">
+                        {new Date(memberData.vip_activated_at).toLocaleDateString()}
+                      </Typography>
+                    </Box>
+                  )}
+                  
+                  {memberData.vip_expires_at && memberData.vip_status !== 'permanent' && (
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        {language === 'zh' ? 'VIP到期时间' : 'VIP Expires'}:
+                      </Typography>
+                      <Typography variant="body2" fontWeight="bold">
+                        {new Date(memberData.vip_expires_at).toLocaleDateString()}
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+              ) : (
+                <Box sx={{ textAlign: 'center', py: 2 }}>
+                  <CircularProgress size={24} sx={{ mb: 2 }} />
+                  <Typography variant="body2" color="text.secondary">
+                    {language === 'zh' ? '加载会员信息中...' : 'Loading member info...'}
+                  </Typography>
+                </Box>
+              )}
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+      
       <Box sx={{ 
         textAlign: 'center', 
         mb: 6,
@@ -470,14 +671,19 @@ function VipZone() {
           {language === 'zh' ? '会员专区' : 'VIP Zone'}
         </Typography>
         <Typography variant="h6" sx={{ color: 'text.secondary', mb: 3 }}>
-          {language === 'zh' ? `欢迎回来，${user?.username || '会员'}！` : `Welcome back, ${user?.username || 'Member'}!`}
+          {language === 'zh' ? `欢迎回来，${user?.username || memberData?.username || '会员'}！` : `Welcome back, ${user?.username || memberData?.username || 'Member'}!`}
         </Typography>
         <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap' }}>
           <Chip 
             icon={<DiamondIcon />}
-            label={language === 'zh' ? '尊贵会员' : 'Premium Member'}
+            label={vipStatus ? 
+              (language === 'zh' ? '尊贵会员' : 'Premium Member') :
+              (language === 'zh' ? '普通会员' : 'Regular Member')
+            }
             sx={{ 
-              background: 'linear-gradient(45deg, #FFD700, #FFA500)',
+              background: vipStatus ? 
+                'linear-gradient(45deg, #FFD700, #FFA500)' :
+                'linear-gradient(45deg, #ccc, #999)',
               color: 'white',
               fontWeight: 'bold'
             }}
@@ -775,6 +981,112 @@ function VipZone() {
         ))}
       </Grid>
 
+      {/* 存储状态信息 */}
+      <Box sx={{ 
+        mt: 4, 
+        p: 3, 
+        background: dbInitialized ? 
+          'linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(139, 195, 74, 0.1) 100%)' :
+          'linear-gradient(135deg, rgba(255, 152, 0, 0.1) 0%, rgba(255, 193, 7, 0.1) 100%)',
+        borderRadius: 2,
+        border: dbInitialized ? '1px solid rgba(76, 175, 80, 0.3)' : '1px solid rgba(255, 152, 0, 0.3)'
+      }}>
+        <Typography variant="h6" sx={{ mb: 2, textAlign: 'center', color: dbInitialized ? '#4CAF50' : '#FF9800' }}>
+          <StorageIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
+          {language === 'zh' ? '存储状态' : 'Storage Status'}
+        </Typography>
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={6} md={3}>
+            <Box sx={{ 
+              textAlign: 'center', 
+              p: 2, 
+              bgcolor: dbInitialized ? 'rgba(76, 175, 80, 0.1)' : 'rgba(255, 152, 0, 0.1)', 
+              borderRadius: 1 
+            }}>
+              <Typography variant="body2" color="text.secondary">
+                {language === 'zh' ? '存储类型' : 'Storage Type'}
+              </Typography>
+              <Typography variant="h6" sx={{ 
+                color: dbInitialized ? '#4CAF50' : '#FF9800', 
+                fontWeight: 'bold' 
+              }}>
+                {memberService ? memberService.getStorageType() : 'LocalStorage'}
+              </Typography>
+            </Box>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Box sx={{ 
+              textAlign: 'center', 
+              p: 2, 
+              bgcolor: dbInitialized ? 'rgba(76, 175, 80, 0.1)' : 'rgba(255, 152, 0, 0.1)', 
+              borderRadius: 1 
+            }}>
+              <Typography variant="body2" color="text.secondary">
+                {language === 'zh' ? '连接状态' : 'Connection'}
+              </Typography>
+              <Typography variant="h6" sx={{ 
+                color: dbInitialized ? '#4CAF50' : '#FF9800', 
+                fontWeight: 'bold' 
+              }}>
+                {dbInitialized ? 
+                  (language === 'zh' ? '已连接' : 'Connected') :
+                  (language === 'zh' ? '本地模式' : 'Local Mode')
+                }
+              </Typography>
+            </Box>
+          </Grid>
+          {memberData && (
+            <>
+              <Grid item xs={12} sm={6} md={3}>
+                <Box sx={{ 
+                  textAlign: 'center', 
+                  p: 2, 
+                  bgcolor: dbInitialized ? 'rgba(76, 175, 80, 0.1)' : 'rgba(255, 152, 0, 0.1)', 
+                  borderRadius: 1 
+                }}>
+                  <Typography variant="body2" color="text.secondary">
+                    {language === 'zh' ? '会员ID' : 'Member ID'}
+                  </Typography>
+                  <Typography variant="h6" sx={{ 
+                    color: dbInitialized ? '#4CAF50' : '#FF9800', 
+                    fontWeight: 'bold' 
+                  }}>
+                    #{memberData.id || 'N/A'}
+                  </Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={12} sm={6} md={3}>
+                <Box sx={{ 
+                  textAlign: 'center', 
+                  p: 2, 
+                  bgcolor: dbInitialized ? 'rgba(76, 175, 80, 0.1)' : 'rgba(255, 152, 0, 0.1)', 
+                  borderRadius: 1 
+                }}>
+                  <Typography variant="body2" color="text.secondary">
+                    {language === 'zh' ? 'VIP状态' : 'VIP Status'}
+                  </Typography>
+                  <Typography variant="h6" sx={{ color: vipStatus ? '#FFD700' : '#999', fontWeight: 'bold' }}>
+                    {memberData.vip_status || 'inactive'}
+                  </Typography>
+                </Box>
+              </Grid>
+            </>
+          )}
+        </Grid>
+        {!dbInitialized && memberService && (
+          <Box sx={{ mt: 2, p: 2, bgcolor: 'rgba(255, 152, 0, 0.1)', borderRadius: 1 }}>
+            <Typography variant="body2" color="text.secondary">
+              {language === 'zh' ? '连接信息' : 'Connection Info'}:
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#FF9800', mt: 1 }}>
+              {memberService.connectionError || 
+                (language === 'zh' ? '数据库连接不可用，使用本地存储模式' : 'Database connection unavailable, using local storage mode')
+              }
+            </Typography>
+          </Box>
+        )}
+      </Box>
+      
       {/* 底部提示 */}
       <Box sx={{ 
         mt: 6, 
@@ -789,6 +1101,13 @@ function VipZone() {
             ? '更多精彩内容正在准备中，敬请期待！如有任何问题，请随时联系我们。'
             : 'More exciting content is being prepared, stay tuned! If you have any questions, please feel free to contact us.'}
         </Typography>
+        {!dbInitialized && (
+          <Typography variant="body2" sx={{ color: 'orange', mt: 1 }}>
+            {language === 'zh' 
+              ? '注意：当前使用本地存储模式，数据可能不会持久保存。'
+              : 'Note: Currently using local storage mode, data may not be persistently saved.'}
+          </Typography>
+        )}
       </Box>
     </Box>
   );

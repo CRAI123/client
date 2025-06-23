@@ -3,11 +3,12 @@ import {
   Container, Paper, Typography, TextField, Button, Box, Tabs, Tab,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
-  Snackbar, Alert, MenuItem, Select, FormControl, InputLabel
+  Snackbar, Alert, MenuItem, Select, FormControl, InputLabel, Chip
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
-import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon, Lock as LockIcon, Logout as LogoutIcon } from '@mui/icons-material';
+import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon, Lock as LockIcon, Logout as LogoutIcon, Storage as StorageIcon } from '@mui/icons-material';
 import { LanguageContext } from '../App';
+import MemberService from '../db/services/MemberService';
 
 
 
@@ -88,8 +89,14 @@ function Admin() {
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState(false);
   
+  // 数据库服务
+  const [memberService] = useState(() => new MemberService());
+  const [dbInitialized, setDbInitialized] = useState(false);
+  const [dbLoading, setDbLoading] = useState(false);
+  
   // 数据状态
   const [data, setData] = useState(initialData);
+  const [dbData, setDbData] = useState({ members: [], vipKeys: [], stats: null });
   const [currentTab, setCurrentTab] = useState(0);
   const [openDialog, setOpenDialog] = useState(false);
   const [editItem, setEditItem] = useState(null);
@@ -98,12 +105,97 @@ function Admin() {
   // 表单状态 - 根据当前选项卡动态设置
   const [formData, setFormData] = useState({});
   
+  // 初始化数据库
+  const initializeDatabase = async () => {
+    setDbLoading(true);
+    try {
+      const result = await memberService.initializeTables();
+      if (result.success) {
+        setDbInitialized(true);
+        showSnackbar('数据库初始化成功', 'success');
+        await loadDatabaseData();
+      } else {
+        showSnackbar(`数据库初始化失败: ${result.error}`, 'error');
+      }
+    } catch (error) {
+      showSnackbar(`数据库初始化失败: ${error.message}`, 'error');
+    } finally {
+      setDbLoading(false);
+    }
+  };
+
+  // 加载数据库数据
+  const loadDatabaseData = async () => {
+    try {
+      const [membersResult, vipKeysResult, statsResult] = await Promise.all([
+        memberService.getMemberList(1, 50),
+        memberService.getVipKeyList({}, 1, 50),
+        memberService.getDashboardStats()
+      ]);
+
+      setDbData({
+        members: membersResult.success ? membersResult.data : [],
+        vipKeys: vipKeysResult.success ? vipKeysResult.data : [],
+        stats: statsResult.success ? statsResult.data : null
+      });
+    } catch (error) {
+      showSnackbar(`加载数据失败: ${error.message}`, 'error');
+    }
+  };
+
+  // 创建VIP密钥到数据库
+  const createVipKeyInDb = async (keyData) => {
+    try {
+      const result = await memberService.createVipKeys(keyData);
+      if (result.success) {
+        showSnackbar('VIP密钥创建成功', 'success');
+        await loadDatabaseData();
+        return result.data;
+      } else {
+        showSnackbar(`创建失败: ${result.error}`, 'error');
+        return null;
+      }
+    } catch (error) {
+      showSnackbar(`创建失败: ${error.message}`, 'error');
+      return null;
+    }
+  };
+
+  // 批量创建VIP密钥
+  const createBatchVipKeys = async (count, keyType = 'temporary') => {
+    try {
+      const keyData = {
+        keyType,
+        vipLevel: 'premium',
+        maxUsageCount: keyType === 'permanent' ? -1 : 1,
+        createdBy: 'admin',
+        description: `管理员批量创建的${keyType === 'permanent' ? '永久' : '临时'}密钥`
+      };
+      
+      const result = await memberService.createVipKeys(keyData, count);
+      if (result.success) {
+        showSnackbar(`成功创建 ${result.data.length} 个VIP密钥`, 'success');
+        await loadDatabaseData();
+      } else {
+        showSnackbar(`批量创建失败: ${result.error}`, 'error');
+      }
+    } catch (error) {
+      showSnackbar(`批量创建失败: ${error.message}`, 'error');
+    }
+  };
+
   // 处理登录
   const handleLogin = () => {
     // 验证管理员账号和密码
     if (username === '123456789' && password === '123456789') {
       setIsLoggedIn(true);
       setLoginError(false);
+      // 登录成功后初始化数据库
+      if (!dbInitialized) {
+        initializeDatabase();
+      } else {
+        loadDatabaseData();
+      }
     } else {
       setLoginError(true);
     }
@@ -375,7 +467,164 @@ function Admin() {
     );
   };
 
+  // 渲染数据库管理界面
+  const renderDatabaseManagement = () => {
+    return (
+      <Box sx={{ mt: 2 }}>
+        {/* 数据库状态和操作 */}
+        <Paper sx={{ p: 2, mb: 2 }}>
+          <Typography variant="h6" gutterBottom>
+            {language === 'zh' ? '数据库状态' : 'Database Status'}
+          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+            <Chip 
+              icon={<StorageIcon />}
+              label={dbInitialized ? 
+                (language === 'zh' ? '已初始化' : 'Initialized') : 
+                (language === 'zh' ? '未初始化' : 'Not Initialized')
+              }
+              color={dbInitialized ? 'success' : 'warning'}
+            />
+            {dbData.stats && (
+              <>
+                <Chip label={`${language === 'zh' ? '会员数' : 'Members'}: ${dbData.stats.totalMembers || 0}`} />
+                <Chip label={`${language === 'zh' ? 'VIP密钥数' : 'VIP Keys'}: ${dbData.stats.totalVipKeys || 0}`} />
+                <Chip label={`${language === 'zh' ? '活跃密钥' : 'Active Keys'}: ${dbData.stats.activeVipKeys || 0}`} />
+              </>
+            )}
+          </Box>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button 
+              variant="contained" 
+              onClick={initializeDatabase}
+              disabled={dbLoading || dbInitialized}
+              startIcon={<StorageIcon />}
+            >
+              {language === 'zh' ? '初始化数据库' : 'Initialize Database'}
+            </Button>
+            <Button 
+              variant="outlined" 
+              onClick={loadDatabaseData}
+              disabled={dbLoading || !dbInitialized}
+            >
+              {language === 'zh' ? '刷新数据' : 'Refresh Data'}
+            </Button>
+            <Button 
+              variant="outlined" 
+              onClick={() => createBatchVipKeys(5, 'temporary')}
+              disabled={dbLoading || !dbInitialized}
+            >
+              {language === 'zh' ? '创建5个临时密钥' : 'Create 5 Temp Keys'}
+            </Button>
+            <Button 
+              variant="outlined" 
+              onClick={() => createBatchVipKeys(2, 'permanent')}
+              disabled={dbLoading || !dbInitialized}
+            >
+              {language === 'zh' ? '创建2个永久密钥' : 'Create 2 Perm Keys'}
+            </Button>
+          </Box>
+        </Paper>
+
+        {/* 会员列表 */}
+        <Paper sx={{ p: 2, mb: 2 }}>
+          <Typography variant="h6" gutterBottom>
+            {language === 'zh' ? '会员列表' : 'Members List'}
+          </Typography>
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>ID</TableCell>
+                  <TableCell>{language === 'zh' ? '用户名' : 'Username'}</TableCell>
+                  <TableCell>{language === 'zh' ? '邮箱' : 'Email'}</TableCell>
+                  <TableCell>{language === 'zh' ? 'VIP状态' : 'VIP Status'}</TableCell>
+                  <TableCell>{language === 'zh' ? '注册时间' : 'Created At'}</TableCell>
+                  <TableCell>{language === 'zh' ? '最后登录' : 'Last Login'}</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {dbData.members.map((member) => (
+                  <TableRow key={member.id}>
+                    <TableCell>{member.id}</TableCell>
+                    <TableCell>{member.username}</TableCell>
+                    <TableCell>{member.email}</TableCell>
+                    <TableCell>
+                      <Chip 
+                        label={member.vip_status ? 'VIP' : 'Normal'}
+                        color={member.vip_status ? 'primary' : 'default'}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>{new Date(member.created_at).toLocaleDateString()}</TableCell>
+                    <TableCell>{member.last_login ? new Date(member.last_login).toLocaleDateString() : '-'}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Paper>
+
+        {/* VIP密钥列表 */}
+        <Paper sx={{ p: 2 }}>
+          <Typography variant="h6" gutterBottom>
+            {language === 'zh' ? 'VIP密钥列表' : 'VIP Keys List'}
+          </Typography>
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>ID</TableCell>
+                  <TableCell>{language === 'zh' ? '密钥' : 'Key Code'}</TableCell>
+                  <TableCell>{language === 'zh' ? '类型' : 'Type'}</TableCell>
+                  <TableCell>{language === 'zh' ? 'VIP等级' : 'VIP Level'}</TableCell>
+                  <TableCell>{language === 'zh' ? '状态' : 'Status'}</TableCell>
+                  <TableCell>{language === 'zh' ? '使用次数' : 'Usage'}</TableCell>
+                  <TableCell>{language === 'zh' ? '创建时间' : 'Created At'}</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {dbData.vipKeys.map((key) => (
+                  <TableRow key={key.id}>
+                    <TableCell>{key.id}</TableCell>
+                    <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                      {key.key_code}
+                    </TableCell>
+                    <TableCell>
+                      <Chip 
+                        label={key.key_type}
+                        color={key.key_type === 'permanent' ? 'success' : 'info'}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>{key.vip_level}</TableCell>
+                    <TableCell>
+                      <Chip 
+                        label={key.status}
+                        color={key.status === 'active' ? 'success' : key.status === 'used' ? 'warning' : 'error'}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      {key.usage_count}/{key.max_usage_count === -1 ? '∞' : key.max_usage_count}
+                    </TableCell>
+                    <TableCell>{new Date(key.created_at).toLocaleDateString()}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Paper>
+      </Box>
+    );
+  };
+
   const renderDataTable = () => {
+    // 如果是数据库管理选项卡
+    if (currentTab === 1) {
+      return renderDatabaseManagement();
+    }
+    
     const dataType = getDataTypeByTabIndex(currentTab);
     const currentData = data[dataType] || [];
     
@@ -508,6 +757,7 @@ function Admin() {
       <Paper sx={{ width: '100%', mb: 2 }}>
         <Tabs value={currentTab} onChange={handleTabChange} aria-label="admin tabs">
           <Tab label={language === 'zh' ? 'VIP密钥' : 'VIP Keys'} />
+          <Tab label={language === 'zh' ? '数据库管理' : 'Database Management'} />
         </Tabs>
         
         <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
