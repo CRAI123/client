@@ -151,19 +151,25 @@ function VipZone() {
     try {
       console.log('从数据库同步VIP密钥数据...');
       const vipKeysResult = await memberService.getVipKeyList({}, 1, 100);
-      if (vipKeysResult.success && vipKeysResult.data && vipKeysResult.data.length > 0) {
-        // 将数据库中的密钥数据转换为localStorage格式
-        const dbKeys = vipKeysResult.data.map(key => ({
-          id: key.id,
-          key: key.key_code,
-          status: key.status,
-          createdDate: new Date(key.created_at).toISOString().split('T')[0],
-          usedBy: key.used_by || null,
-          usedDate: key.used_at ? new Date(key.used_at).toISOString().split('T')[0] : null,
-          usageCount: key.current_usage_count || 0
-        }));
-        localStorage.setItem('vipKeyData', JSON.stringify(dbKeys));
-        console.log('从数据库同步VIP密钥成功:', dbKeys.length, '个密钥');
+      if (vipKeysResult.success) {
+        if (vipKeysResult.data && vipKeysResult.data.length > 0) {
+          // 将数据库中的密钥数据转换为localStorage格式
+          const dbKeys = vipKeysResult.data.map(key => ({
+            id: key.id,
+            key: key.key_code,
+            status: key.status,
+            createdDate: new Date(key.created_at).toISOString().split('T')[0],
+            usedBy: key.used_by || null,
+            usedDate: key.used_at ? new Date(key.used_at).toISOString().split('T')[0] : null,
+            usageCount: key.current_usage_count || 0
+          }));
+          localStorage.setItem('vipKeyData', JSON.stringify(dbKeys));
+          console.log('从数据库同步VIP密钥成功:', dbKeys.length, '个密钥');
+        } else {
+          // 数据库连接成功但没有密钥数据，清空localStorage中的旧数据
+          localStorage.setItem('vipKeyData', JSON.stringify([]));
+          console.log('数据库中没有VIP密钥数据，已清空本地缓存');
+        }
         
         // 触发storage事件，通知其他组件数据已更新
         window.dispatchEvent(new StorageEvent('storage', {
@@ -172,7 +178,7 @@ function VipZone() {
           storageArea: localStorage
         }));
       } else {
-        console.log('数据库中没有VIP密钥数据，使用本地固定密钥');
+        console.log('获取数据库VIP密钥失败:', vipKeysResult.error);
       }
     } catch (error) {
       console.error('从数据库同步VIP密钥失败:', error);
@@ -273,6 +279,13 @@ function VipZone() {
         const vipKeys = JSON.parse(vipKeysData);
         console.log('当前存储的VIP密钥:', vipKeys);
         console.log('输入的密钥:', vipKey.trim());
+        
+        // 检查是否有可用的密钥
+        if (vipKeys.length === 0) {
+          setKeyError(language === 'zh' ? '系统中没有可用的VIP密钥，请联系管理员创建密钥' : 'No VIP keys available in system, please contact administrator');
+          setIsLoading(false);
+          return;
+        }
         
         // 检查密钥是否存在且状态有效
         const validKey = vipKeys.find(key => 
