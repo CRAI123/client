@@ -145,6 +145,11 @@ function Admin() {
         memberService.getDashboardStats()
       ]);
 
+      // 如果能成功获取数据，说明数据库已经可用
+      if (membersResult.success || vipKeysResult.success) {
+        setDbInitialized(true);
+      }
+
       setDbData({
         members: (membersResult.success && Array.isArray(membersResult.data)) ? membersResult.data : [],
         vipKeys: (vipKeysResult.success && Array.isArray(vipKeysResult.data)) ? vipKeysResult.data : [],
@@ -219,7 +224,9 @@ function Admin() {
         description: `${validityNames[validityPeriod]}有效期密钥`
       };
       
+      console.log('开始创建VIP密钥:', { count, validityPeriod, options });
       const result = await memberService.createBatchVipKeysWithValidity(count, validityPeriod, options);
+      console.log('创建VIP密钥结果:', result);
       
       if (result.success) {
         setSnackbar({
@@ -230,8 +237,10 @@ function Admin() {
           severity: 'success'
         });
         // 刷新数据
+        console.log('刷新数据库数据...');
         await loadDatabaseData();
       } else {
+        console.error('创建VIP密钥失败:', result.error);
         setSnackbar({
           open: true,
           message: language === 'zh' 
@@ -360,77 +369,51 @@ function Admin() {
   };
   
   // 保存数据
-  const handleSave = async () => {
+  const handleSave = () => {
     const dataType = getDataTypeByTabIndex(currentTab);
+    let newData = { ...data };
     
-    // 检查是否在数据库管理选项卡
-    if (currentTab === 1) {
-      // 数据库管理模式
-      if (editItem) {
-        // 编辑现有项 - 暂时不支持数据库编辑
-        showSnackbar(language === 'zh' ? '数据库编辑功能暂未实现' : 'Database editing not implemented yet', 'warning');
-        return;
-      } else {
-        // 添加新项到数据库
-        if (dataType === 'vipKeys') {
-          const keyData = {
-            keyType: formData.status === 'permanent' ? 'permanent' : 'temporary',
-            vipLevel: formData.vipLevel || 'premium',
-            maxUsageCount: formData.status === 'permanent' ? -1 : 1,
-            createdBy: 'admin',
-            description: formData.description || '管理员手动创建的VIP密钥'
-          };
-          
-          const result = await createVipKeyInDb(keyData);
-          if (result) {
-            handleCloseDialog();
-            return;
-          }
-        }
-      }
+    if (editItem) {
+      // 编辑现有项
+      newData[dataType] = data[dataType].map(item => 
+        item.id === editItem.id ? { ...item, ...formData } : item
+      );
+      showSnackbar(language === 'zh' ? '更新成功' : 'Updated successfully', 'success');
     } else {
-      // localStorage模式
-      let newData = { ...data };
+      // 添加新项
+      const newId = Math.max(...data[dataType].map(item => item.id), 0) + 1;
+      let newItem = { id: newId, ...formData };
       
-      if (editItem) {
-        // 编辑现有项
-        newData[dataType] = data[dataType].map(item => 
-          item.id === editItem.id ? { ...item, ...formData } : item
-        );
-        showSnackbar(language === 'zh' ? '更新成功' : 'Updated successfully', 'success');
-      } else {
-        // 添加新项
-        const newId = Math.max(...data[dataType].map(item => item.id), 0) + 1;
-        let newItem = { id: newId, ...formData };
-        
-        // 如果是VIP密钥，自动生成密钥
-        if (dataType === 'vipKeys') {
-          newItem = {
-            ...newItem,
-            key: generateVipKey(),
-            status: 'active',
-            createdDate: new Date().toISOString().split('T')[0],
-            usageCount: 0
-          };
-        }
-        
-        newData[dataType] = [...data[dataType], newItem];
-        showSnackbar(language === 'zh' ? '添加成功' : 'Added successfully', 'success');
+      // 如果是VIP密钥，自动生成密钥
+      if (dataType === 'vipKeys') {
+        newItem = {
+          ...newItem,
+          key: generateVipKey(),
+          status: 'active',
+          createdDate: new Date().toISOString().split('T')[0],
+          usageCount: 0
+        };
       }
       
-      setData(newData);
-      handleCloseDialog();
-      
-      // 更新localStorage
-      localStorage.setItem(STORAGE_KEYS[dataType], JSON.stringify(newData[dataType]));
-      
-      // 手动触发storage事件，确保同一标签页内的组件能够同步
-      window.dispatchEvent(new StorageEvent('storage', {
-        key: STORAGE_KEYS[dataType],
-        newValue: localStorage.getItem(STORAGE_KEYS[dataType]),
-        storageArea: localStorage
-      }));
+      newData[dataType] = [...data[dataType], newItem];
+      showSnackbar(language === 'zh' ? '添加成功' : 'Added successfully', 'success');
     }
+    
+    setData(newData);
+    handleCloseDialog();
+    
+    // 更新localStorage
+    localStorage.setItem(STORAGE_KEYS[dataType], JSON.stringify(newData[dataType]));
+    
+    // 手动触发storage事件，确保同一标签页内的组件能够同步
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: STORAGE_KEYS[dataType],
+      newValue: localStorage.getItem(STORAGE_KEYS[dataType]),
+      storageArea: localStorage
+    }));
+    
+    // 在实际应用中，这里应该调用API将数据同步到后端
+    console.log('保存后的数据:', newData);
   };
   
   // 删除数据
@@ -518,26 +501,6 @@ function Admin() {
             <MenuItem value="expired">{language === 'zh' ? '已过期' : 'Expired'}</MenuItem>
           </Select>
         </FormControl>
-        <FormControl fullWidth>
-          <InputLabel>{language === 'zh' ? 'VIP等级' : 'VIP Level'}</InputLabel>
-          <Select
-            value={formData.vipLevel || 'premium'}
-            onChange={(e) => setFormData({ ...formData, vipLevel: e.target.value })}
-            label={language === 'zh' ? 'VIP等级' : 'VIP Level'}
-          >
-            <MenuItem value="basic">{language === 'zh' ? '基础' : 'Basic'}</MenuItem>
-            <MenuItem value="premium">{language === 'zh' ? '高级' : 'Premium'}</MenuItem>
-            <MenuItem value="ultimate">{language === 'zh' ? '至尊' : 'Ultimate'}</MenuItem>
-          </Select>
-        </FormControl>
-        <TextField
-          label={language === 'zh' ? '描述' : 'Description'}
-          value={formData.description || ''}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          fullWidth
-          multiline
-          rows={2}
-        />
         <TextField
           label={language === 'zh' ? '使用者' : 'Used By'}
           value={formData.usedBy || ''}
