@@ -14,7 +14,7 @@ import SupportIcon from '@mui/icons-material/Support';
 import LockIcon from '@mui/icons-material/Lock';
 import VpnKeyIcon from '@mui/icons-material/VpnKey';
 import StorageIcon from '@mui/icons-material/Storage';
-import WarningIcon from '@mui/icons-material/Warning';
+
 import MemberService from '../db/services/MemberService';
 
 function VipZone() {
