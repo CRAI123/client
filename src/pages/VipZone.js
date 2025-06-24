@@ -17,6 +17,37 @@ import StorageIcon from '@mui/icons-material/Storage';
 
 import MemberService from '../db/services/MemberService';
 
+// 固定的10个VIP密钥（与Admin.js保持一致）
+const FIXED_VIP_KEYS = [
+  'ABCD-1234-EFGH-5678',
+  'IJKL-9012-MNOP-3456',
+  'QRST-7890-UVWX-1234',
+  'YZAB-5678-CDEF-9012',
+  'GHIJ-3456-KLMN-7890',
+  'OPQR-1234-STUV-5678',
+  'WXYZ-9012-ABCD-3456',
+  'EFGH-7890-IJKL-1234',
+  'MNOP-5678-QRST-9012',
+  'UVWX-3456-YZAB-7890'
+];
+
+// 生成固定的10个VIP密钥
+const generateFixedVipKeys = () => {
+  const keys = [];
+  for (let i = 0; i < FIXED_VIP_KEYS.length; i++) {
+    keys.push({
+      id: i + 1,
+      key: FIXED_VIP_KEYS[i],
+      status: 'permanent', // 永久有效状态
+      createdDate: new Date().toISOString().split('T')[0],
+      usedBy: null,
+      usedDate: null,
+      usageCount: 0 // 使用次数统计
+    });
+  }
+  return keys;
+};
+
 function VipZone() {
   const { language } = useContext(LanguageContext);
   const { isAuthenticated, user } = useAuth();
@@ -84,6 +115,9 @@ function VipZone() {
             console.log('数据库服务器信息:', initResult.serverInfo);
           }
           
+          // 数据库初始化成功后，同步VIP密钥数据
+          await syncVipKeysFromDatabase();
+          
           // 尝试获取会员数据
           const memberResult = await memberService.getMemberByUsername(user.username || user.email);
           if (memberResult.success && memberResult.data) {
@@ -99,6 +133,8 @@ function VipZone() {
               setMemberData(registerResult.data);
             }
           }
+        } else {
+          console.log('数据库初始化失败，使用localStorage模式:', initResult.error);
         }
       } catch (error) {
         console.error('初始化失败:', error);
@@ -110,10 +146,61 @@ function VipZone() {
     initializeAndLoadData();
   }, [user, memberService]);
 
+  // 从数据库同步VIP密钥数据
+  const syncVipKeysFromDatabase = async () => {
+    try {
+      console.log('从数据库同步VIP密钥数据...');
+      const vipKeysResult = await memberService.getVipKeyList({}, 1, 100);
+      if (vipKeysResult.success && vipKeysResult.data && vipKeysResult.data.length > 0) {
+        // 将数据库中的密钥数据转换为localStorage格式
+        const dbKeys = vipKeysResult.data.map(key => ({
+          id: key.id,
+          key: key.key_code,
+          status: key.status,
+          createdDate: new Date(key.created_at).toISOString().split('T')[0],
+          usedBy: key.used_by || null,
+          usedDate: key.used_at ? new Date(key.used_at).toISOString().split('T')[0] : null,
+          usageCount: key.current_usage_count || 0
+        }));
+        localStorage.setItem('vipKeyData', JSON.stringify(dbKeys));
+        console.log('从数据库同步VIP密钥成功:', dbKeys.length, '个密钥');
+        
+        // 触发storage事件，通知其他组件数据已更新
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: 'vipKeyData',
+          newValue: localStorage.getItem('vipKeyData'),
+          storageArea: localStorage
+        }));
+      } else {
+        console.log('数据库中没有VIP密钥数据，使用本地固定密钥');
+      }
+    } catch (error) {
+      console.error('从数据库同步VIP密钥失败:', error);
+    }
+  };
+
   useEffect(() => {
     if (!isAuthenticated) {
       navigate('/login');
     }
+    
+    // 初始化本地VIP密钥数据（仅在数据库不可用时使用）
+    const initializeLocalVipKeys = () => {
+      const vipKeysData = localStorage.getItem('vipKeyData');
+      if (!vipKeysData) {
+        const fixedKeys = generateFixedVipKeys();
+        localStorage.setItem('vipKeyData', JSON.stringify(fixedKeys));
+        console.log('VIP密钥已初始化（本地固定密钥):', fixedKeys);
+      } else {
+        console.log('从localStorage加载现有VIP密钥:', JSON.parse(vipKeysData));
+      }
+    };
+    
+    // 如果数据库未初始化，使用本地密钥
+    if (!dbInitialized) {
+      initializeLocalVipKeys();
+    }
+    
     // 检查是否已经验证过VIP密钥
     const verifiedKey = localStorage.getItem('verifiedVipKey');
     if (verifiedKey) {
@@ -136,8 +223,9 @@ function VipZone() {
     setKeyError('');
     
     try {
+      // 优先尝试数据库验证（如果数据库可用且有会员数据）
       if (dbInitialized && memberData) {
-        // 使用数据库验证VIP密钥
+        console.log('使用数据库验证VIP密钥:', vipKey.trim());
         const result = await memberService.activateVipKey(memberData.id, vipKey.trim());
         
         if (result.success) {
@@ -150,8 +238,28 @@ function VipZone() {
           setIsVipVerified(true);
           setShowKeyDialog(false);
           localStorage.setItem('verifiedVipKey', vipKey.trim());
+          console.log('数据库验证成功');
         } else {
+          console.log('数据库验证失败:', result.error);
           setKeyError(result.error || (language === 'zh' ? '无效的VIP密钥' : 'Invalid VIP key'));
+        }
+      } else if (dbInitialized) {
+        // 数据库已初始化但没有会员数据，尝试直接验证密钥是否存在
+        console.log('数据库已初始化，检查密钥是否存在:', vipKey.trim());
+        const vipKeysResult = await memberService.getVipKeyList({ keyCode: vipKey.trim() }, 1, 1);
+        
+        if (vipKeysResult.success && vipKeysResult.data && vipKeysResult.data.length > 0) {
+          const keyData = vipKeysResult.data[0];
+          if (keyData.status === 'active' || keyData.status === 'permanent') {
+            setIsVipVerified(true);
+            setShowKeyDialog(false);
+            localStorage.setItem('verifiedVipKey', vipKey.trim());
+            console.log('数据库密钥验证成功');
+          } else {
+            setKeyError(language === 'zh' ? `密钥状态无效: ${keyData.status}` : `Invalid key status: ${keyData.status}`);
+          }
+        } else {
+          setKeyError(language === 'zh' ? '密钥不存在或已失效' : 'Key does not exist or is invalid');
         }
       } else {
         // 回退到localStorage验证（如果数据库不可用）
