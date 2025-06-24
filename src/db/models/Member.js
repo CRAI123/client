@@ -1,34 +1,30 @@
 // Member.js - 会员数据模型
-import { neon } from '@neondatabase/serverless';
 import DatabaseConfig from '../config/DatabaseConfig.js';
 
 class Member {
   constructor() {
     this.dbConfig = new DatabaseConfig();
     this.sql = null;
-    this.initializeConnection();
   }
 
-  // 初始化数据库连接
-  initializeConnection() {
-    try {
-      const config = this.dbConfig.getConnectionConfig();
-      if (config.success) {
-        this.sql = neon(config.connectionString);
+  // 获取数据库连接
+  async getConnection() {
+    if (!this.sql) {
+      const connectionResult = await this.dbConfig.createConnection();
+      if (connectionResult.success) {
+        this.sql = connectionResult.connection;
       } else {
-        console.warn('Member模型: 数据库连接配置失败:', config.error);
-        throw new Error(config.error);
+        throw new Error(connectionResult.error);
       }
-    } catch (error) {
-      console.error('Member模型: 初始化连接失败:', error);
-      throw error;
     }
+    return this.sql;
   }
 
   // 创建会员表
   async createMemberTable() {
     try {
-      await this.sql`
+      const sql = await this.getConnection();
+      await sql`
         CREATE TABLE IF NOT EXISTS members (
           id SERIAL PRIMARY KEY,
           username VARCHAR(50) UNIQUE NOT NULL,
@@ -55,8 +51,9 @@ class Member {
   // 创建会员
   async createMember(memberData) {
     try {
+      const sql = await this.getConnection();
       const { username, email, passwordHash, vipLevel = 'basic' } = memberData;
-      const result = await this.sql`
+      const result = await sql`
         INSERT INTO members (username, email, password_hash, vip_level)
         VALUES (${username}, ${email}, ${passwordHash}, ${vipLevel})
         RETURNING id, username, email, vip_level, created_at
@@ -71,7 +68,8 @@ class Member {
   // 根据用户名获取会员
   async getMemberByUsername(username) {
     try {
-      const result = await this.sql`
+      const sql = await this.getConnection();
+      const result = await sql`
         SELECT * FROM members WHERE username = ${username} AND is_active = true
       `;
       return { success: true, data: result[0] || null };
@@ -84,7 +82,8 @@ class Member {
   // 根据邮箱获取会员
   async getMemberByEmail(email) {
     try {
-      const result = await this.sql`
+      const sql = await this.getConnection();
+      const result = await sql`
         SELECT * FROM members WHERE email = ${email} AND is_active = true
       `;
       return { success: true, data: result[0] || null };
@@ -97,7 +96,8 @@ class Member {
   // 激活VIP密钥
   async activateVipKey(memberId, vipKey, vipLevel, expiresAt) {
     try {
-      const result = await this.sql`
+      const sql = await this.getConnection();
+      const result = await sql`
         UPDATE members 
         SET vip_key = ${vipKey}, 
             vip_level = ${vipLevel}, 
@@ -117,7 +117,8 @@ class Member {
   // 更新最后登录时间
   async updateLastLogin(memberId) {
     try {
-      await this.sql`
+      const sql = await this.getConnection();
+      await sql`
         UPDATE members 
         SET last_login = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
         WHERE id = ${memberId}
@@ -132,7 +133,8 @@ class Member {
   // 获取所有会员（管理员功能）
   async getAllMembers(limit = 50, offset = 0) {
     try {
-      const result = await this.sql`
+      const sql = await this.getConnection();
+      const result = await sql`
         SELECT id, username, email, vip_level, vip_activated_at, vip_expires_at, 
                created_at, last_login, is_active
         FROM members 
@@ -149,7 +151,8 @@ class Member {
   // 统计会员数量
   async getMemberStats() {
     try {
-      const result = await this.sql`
+      const sql = await this.getConnection();
+      const result = await sql`
         SELECT 
           COUNT(*) as total_members,
           COUNT(CASE WHEN vip_level != 'basic' THEN 1 END) as vip_members,

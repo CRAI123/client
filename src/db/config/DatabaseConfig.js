@@ -172,9 +172,47 @@ class DatabaseConfig {
       };
     } catch (error) {
       console.error('数据库连接测试失败:', error);
+      
+      // 检查是否是包未安装的错误
+      if (error.message.includes('Cannot resolve module') || error.message.includes('@neondatabase/serverless')) {
+        return {
+          success: false,
+          error: '请先安装 @neondatabase/serverless 包: npm install @neondatabase/serverless',
+          fallbackToLocalStorage: true
+        };
+      }
+      
       return {
         success: false,
         error: `数据库连接失败: ${error.message}`,
+        fallbackToLocalStorage: true
+      };
+    }
+  }
+
+  /**
+   * 创建数据库连接实例
+   * @returns {Promise<object>} 连接实例或错误信息
+   */
+  async createConnection() {
+    const config = this.getConnectionConfig();
+    if (!config.success) {
+      return config;
+    }
+
+    try {
+      const { neon } = await import('@neondatabase/serverless');
+      const sql = neon(config.connectionString);
+      
+      return {
+        success: true,
+        connection: sql
+      };
+    } catch (error) {
+      console.error('创建数据库连接失败:', error);
+      return {
+        success: false,
+        error: `创建数据库连接失败: ${error.message}`,
         fallbackToLocalStorage: true
       };
     }

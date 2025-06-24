@@ -228,6 +228,26 @@ class MemberService {
     }
   }
 
+  // 管理员功能：创建指定有效期的VIP密钥
+  async createVipKeyWithValidity(validityPeriod, options = {}) {
+    try {
+      return await this.vipKeyModel.createVipKeyWithValidity(validityPeriod, options);
+    } catch (error) {
+      console.error('创建指定有效期VIP密钥失败:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // 管理员功能：批量创建指定有效期的VIP密钥
+  async createBatchVipKeysWithValidity(count, validityPeriod, options = {}) {
+    try {
+      return await this.vipKeyModel.createBatchVipKeysWithValidity(count, validityPeriod, options);
+    } catch (error) {
+      console.error('批量创建指定有效期VIP密钥失败:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
   // 管理员功能：获取会员列表
   async getMemberList(page = 1, pageSize = 20) {
     try {
@@ -327,6 +347,15 @@ class MemberService {
 
       const results = [];
       for (const keyCode of defaultKeys) {
+        // 先检查密钥是否已存在
+        const existingKey = await this.vipKeyModel.validateVipKey(keyCode);
+        if (existingKey.success && existingKey.data) {
+          console.log(`密钥 ${keyCode} 已存在，跳过创建`);
+          results.push(existingKey.data);
+          continue;
+        }
+
+        // 如果不存在，则创建新密钥
         const result = await this.vipKeyModel.createVipKey({
           keyCode,
           keyType: 'permanent',
@@ -338,6 +367,9 @@ class MemberService {
         
         if (result.success) {
           results.push(result.data);
+          console.log(`成功创建密钥: ${keyCode}`);
+        } else {
+          console.warn(`创建密钥失败: ${keyCode}, 错误: ${result.error}`);
         }
       }
 

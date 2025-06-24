@@ -73,7 +73,7 @@ const generateVipKeys = () => {
 
 // 初始数据 - 实际应用中应从后端API获取
 const initialData = {
-  vipKeys: generateFixedVipKeys() // 使用固定密钥
+  vipKeys: [] // 空数组，完全依赖localStorage或数据库中的数据
 };
 
 // localStorage存储键
@@ -127,6 +127,18 @@ function Admin() {
   // 加载数据库数据
   const loadDatabaseData = async () => {
     try {
+      // 如果数据库未初始化，先尝试初始化
+      if (!dbInitialized) {
+        const initResult = await memberService.initializeTables();
+        if (initResult.success) {
+          setDbInitialized(true);
+          showSnackbar('数据库初始化成功', 'success');
+        } else if (!initResult.fallbackToLocalStorage) {
+          showSnackbar(`数据库初始化失败: ${initResult.error}`, 'error');
+          return;
+        }
+      }
+
       const [membersResult, vipKeysResult, statsResult] = await Promise.all([
         memberService.getMemberList(1, 50),
         memberService.getVipKeyList({}, 1, 50),
@@ -134,12 +146,18 @@ function Admin() {
       ]);
 
       setDbData({
-        members: membersResult.success ? membersResult.data : [],
-        vipKeys: vipKeysResult.success ? vipKeysResult.data : [],
+        members: (membersResult.success && Array.isArray(membersResult.data)) ? membersResult.data : [],
+        vipKeys: (vipKeysResult.success && Array.isArray(vipKeysResult.data)) ? vipKeysResult.data : [],
         stats: statsResult.success ? statsResult.data : null
       });
     } catch (error) {
       showSnackbar(`加载数据失败: ${error.message}`, 'error');
+      // 确保在出错时也设置默认值
+      setDbData({
+        members: [],
+        vipKeys: [],
+        stats: null
+      });
     }
   };
 
@@ -184,18 +202,67 @@ function Admin() {
     }
   };
 
+  // 创建指定有效期的VIP密钥
+  const createVipKeysWithValidity = async (count, validityPeriod) => {
+    setDbLoading(true);
+    try {
+      const validityNames = {
+        '1month': language === 'zh' ? '1个月' : '1 Month',
+        '6months': language === 'zh' ? '6个月' : '6 Months',
+        '1year': language === 'zh' ? '1年' : '1 Year',
+        'permanent': language === 'zh' ? '永久' : 'Permanent'
+      };
+
+      const options = {
+        vipLevel: 'premium',
+        createdBy: 'admin',
+        description: `${validityNames[validityPeriod]}有效期密钥`
+      };
+      
+      const result = await memberService.createBatchVipKeysWithValidity(count, validityPeriod, options);
+      
+      if (result.success) {
+        setSnackbar({
+          open: true,
+          message: language === 'zh' 
+            ? `成功创建${count}个${validityNames[validityPeriod]}有效期密钥`
+            : `Successfully created ${count} ${validityNames[validityPeriod]} validity keys`,
+          severity: 'success'
+        });
+        // 刷新数据
+        await loadDatabaseData();
+      } else {
+        setSnackbar({
+          open: true,
+          message: language === 'zh' 
+            ? `创建密钥失败: ${result.error}`
+            : `Failed to create keys: ${result.error}`,
+          severity: 'error'
+        });
+      }
+    } catch (error) {
+      console.error('创建指定有效期VIP密钥失败:', error);
+      setSnackbar({
+        open: true,
+        message: language === 'zh' 
+          ? `创建密钥失败: ${error.message}`
+          : `Failed to create keys: ${error.message}`,
+        severity: 'error'
+      });
+    } finally {
+      setDbLoading(false);
+    }
+  };
+
   // 处理登录
   const handleLogin = () => {
     // 验证管理员账号和密码
     if (username === '123456789' && password === '123456789') {
       setIsLoggedIn(true);
       setLoginError(false);
-      // 登录成功后初始化数据库
-      if (!dbInitialized) {
-        initializeDatabase();
-      } else {
-        loadDatabaseData();
-      }
+      // 登录成功后加载数据库数据
+      // 移除强制初始化，让数据库服务自己判断是否需要初始化
+      loadDatabaseData();
     } else {
       setLoginError(true);
     }
@@ -222,12 +289,16 @@ function Admin() {
         }
       });
       
-        // 强制重新初始化固定VIP密钥数据
-        loadedData.vipKeys = generateFixedVipKeys();
-        localStorage.setItem(STORAGE_KEYS.vipKeys, JSON.stringify(loadedData.vipKeys));
+        // 只在没有VIP密钥数据时才初始化固定密钥
+        if (!loadedData.vipKeys || loadedData.vipKeys.length === 0) {
+          loadedData.vipKeys = generateFixedVipKeys();
+          localStorage.setItem(STORAGE_KEYS.vipKeys, JSON.stringify(loadedData.vipKeys));
+          console.log('VIP密钥已初始化:', loadedData.vipKeys);
+        } else {
+          console.log('从localStorage加载现有VIP密钥:', loadedData.vipKeys);
+        }
         
         setData(loadedData);
-        console.log('VIP密钥已初始化:', loadedData.vipKeys);
       
       // 设置实时监听localStorage变化
       const handleStorageChange = (e) => {
@@ -356,27 +427,7 @@ function Admin() {
     setSnackbar({ open: true, message, severity });
   };
 
-  // 批量生成VIP密钥
-  const handleBatchGenerateKeys = () => {
-    // 重置为固定的10个密钥
-    const fixedKeys = generateFixedVipKeys();
-    const newData = { ...data };
-    
-    newData.vipKeys = fixedKeys;
-    setData(newData);
-    
-    // 更新localStorage
-    localStorage.setItem(STORAGE_KEYS.vipKeys, JSON.stringify(newData.vipKeys));
-    
-    // 手动触发storage事件，确保同一标签页内的组件能够同步
-    window.dispatchEvent(new StorageEvent('storage', {
-      key: 'vipKeyData',
-      newValue: localStorage.getItem('vipKeyData'),
-      storageArea: localStorage
-    }));
-    
-    showSnackbar(language === 'zh' ? '已重置为10个固定密钥（可重复使用）' : 'Reset to 10 fixed keys (reusable)', 'success');
-  };
+
   
   // 添加生成随机密钥的函数（可选功能）
   const handleGenerateRandomKeys = () => {
@@ -511,17 +562,31 @@ function Admin() {
             </Button>
             <Button 
               variant="outlined" 
-              onClick={() => createBatchVipKeys(5, 'temporary')}
+              onClick={() => createVipKeysWithValidity(5, '1month')}
               disabled={dbLoading || !dbInitialized}
             >
-              {language === 'zh' ? '创建5个临时密钥' : 'Create 5 Temp Keys'}
+              {language === 'zh' ? '创建5个1月期密钥' : 'Create 5 1-Month Keys'}
             </Button>
             <Button 
               variant="outlined" 
-              onClick={() => createBatchVipKeys(2, 'permanent')}
+              onClick={() => createVipKeysWithValidity(3, '6months')}
               disabled={dbLoading || !dbInitialized}
             >
-              {language === 'zh' ? '创建2个永久密钥' : 'Create 2 Perm Keys'}
+              {language === 'zh' ? '创建3个半年期密钥' : 'Create 3 6-Month Keys'}
+            </Button>
+            <Button 
+              variant="outlined" 
+              onClick={() => createVipKeysWithValidity(2, '1year')}
+              disabled={dbLoading || !dbInitialized}
+            >
+              {language === 'zh' ? '创建2个1年期密钥' : 'Create 2 1-Year Keys'}
+            </Button>
+            <Button 
+              variant="outlined" 
+              onClick={() => createVipKeysWithValidity(1, 'permanent')}
+              disabled={dbLoading || !dbInitialized}
+            >
+              {language === 'zh' ? '创建1个永久密钥' : 'Create 1 Permanent Key'}
             </Button>
           </Box>
         </Paper>
@@ -544,7 +609,7 @@ function Admin() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {dbData.members.map((member) => (
+                {(dbData.members || []).map((member) => (
                   <TableRow key={member.id}>
                     <TableCell>{member.id}</TableCell>
                     <TableCell>{member.username}</TableCell>
@@ -580,11 +645,12 @@ function Admin() {
                   <TableCell>{language === 'zh' ? 'VIP等级' : 'VIP Level'}</TableCell>
                   <TableCell>{language === 'zh' ? '状态' : 'Status'}</TableCell>
                   <TableCell>{language === 'zh' ? '使用次数' : 'Usage'}</TableCell>
+                  <TableCell>{language === 'zh' ? '过期时间' : 'Expires At'}</TableCell>
                   <TableCell>{language === 'zh' ? '创建时间' : 'Created At'}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {dbData.vipKeys.map((key) => (
+                {(dbData.vipKeys || []).map((key) => (
                   <TableRow key={key.id}>
                     <TableCell>{key.id}</TableCell>
                     <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
@@ -606,7 +672,31 @@ function Admin() {
                       />
                     </TableCell>
                     <TableCell>
-                      {key.usage_count}/{key.max_usage_count === -1 ? '∞' : key.max_usage_count}
+                      {key.current_usage_count || 0}/{key.max_usage_count === -1 ? '∞' : key.max_usage_count}
+                    </TableCell>
+                    <TableCell>
+                      {key.expires_at ? (
+                        <Box>
+                          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                            {new Date(key.expires_at).toLocaleDateString()}
+                          </Typography>
+                          <Typography variant="caption" sx={{ 
+                            color: new Date(key.expires_at) < new Date() ? 'error.main' : 'text.secondary',
+                            fontSize: '0.7rem'
+                          }}>
+                            {new Date(key.expires_at) < new Date() ? 
+                              (language === 'zh' ? '已过期' : 'Expired') : 
+                              (language === 'zh' ? '有效' : 'Valid')
+                            }
+                          </Typography>
+                        </Box>
+                      ) : (
+                        <Chip 
+                          label={language === 'zh' ? '永久' : 'Permanent'} 
+                          color="success" 
+                          size="small" 
+                        />
+                      )}
                     </TableCell>
                     <TableCell>{new Date(key.created_at).toLocaleDateString()}</TableCell>
                   </TableRow>
@@ -767,13 +857,6 @@ function Admin() {
             onClick={handleOpenAddDialog}
           >
             {language === 'zh' ? '添加' : 'Add'}
-          </Button>
-          <Button
-            variant="outlined"
-            onClick={handleBatchGenerateKeys}
-            sx={{ ml: 2 }}
-          >
-            {language === 'zh' ? '重置固定密钥' : 'Reset Fixed Keys'}
           </Button>
           <Button
             variant="outlined"
