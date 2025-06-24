@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
+import MemberService from '../db/services/MemberService.js';
 
 // 创建认证上下文
 export const AuthContext = createContext();
@@ -7,6 +8,7 @@ export const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [memberService] = useState(() => new MemberService());
 
   // 初始化时从localStorage加载用户信息
   useEffect(() => {
@@ -32,13 +34,104 @@ export const AuthProvider = ({ children }) => {
     setCurrentUser(userData);
   };
 
+  // 同步用户数据到数据库
+  const syncUserDataToDatabase = async (userInfo) => {
+    try {
+      // 检查数据库中是否已存在该用户
+      const existingUser = await memberService.memberModel.getMemberByUsername(userInfo.username);
+      
+      if (!existingUser.success || !existingUser.data) {
+        // 用户不存在，创建新用户记录
+        const memberData = {
+          username: userInfo.username,
+          email: userInfo.email || `${userInfo.username}@local.com`,
+          passwordHash: 'local_auth', // 标记为本地认证
+          vipStatus: userInfo.vipStatus || false,
+          vipLevel: userInfo.vipLevel || 'basic',
+          vipExpiresAt: userInfo.vipExpiresAt || null,
+          lastLogin: new Date().toISOString(),
+          metadata: {
+            source: 'localStorage',
+            syncedAt: new Date().toISOString(),
+            originalData: userInfo
+          }
+        };
+        
+        const createResult = await memberService.memberModel.createMember(memberData);
+        if (createResult.success) {
+          console.log('用户数据已同步到数据库:', createResult.data);
+        } else {
+          console.warn('用户数据同步失败:', createResult.error);
+        }
+      } else {
+        // 用户已存在，更新最后登录时间和相关信息
+        const updateResult = await memberService.memberModel.updateLastLogin(existingUser.data.id);
+        if (updateResult.success) {
+          console.log('用户登录时间已更新');
+        }
+        
+        // 同步VIP状态变化
+        if (userInfo.vipStatus !== existingUser.data.vip_status) {
+          await memberService.memberModel.updateMemberVipStatus(
+            existingUser.data.id,
+            userInfo.vipStatus,
+            userInfo.vipLevel,
+            userInfo.vipExpiresAt
+          );
+        }
+      }
+      
+      // 同步localStorage中的其他数据（如收藏、设置等）
+      await syncAdditionalUserData(userInfo);
+      
+    } catch (error) {
+      console.error('数据库同步过程中出错:', error);
+      throw error;
+    }
+  };
+
+  // 同步其他用户数据（收藏、设置等）
+  const syncAdditionalUserData = async (userInfo) => {
+    try {
+      // 同步用户收藏数据
+      if (userInfo.favorites && userInfo.favorites.length > 0) {
+        // 这里可以添加收藏数据的同步逻辑
+        console.log('同步用户收藏数据:', userInfo.favorites);
+      }
+      
+      // 同步用户设置
+      if (userInfo.settings) {
+        // 这里可以添加用户设置的同步逻辑
+        console.log('同步用户设置:', userInfo.settings);
+      }
+      
+      // 同步VIP密钥使用记录
+      if (userInfo.usedVipKeys && userInfo.usedVipKeys.length > 0) {
+        console.log('同步VIP密钥使用记录:', userInfo.usedVipKeys);
+      }
+      
+    } catch (error) {
+      console.error('同步附加用户数据失败:', error);
+    }
+  };
+
   // 登录函数
-  const login = (userData) => {
-    // 存储用户信息到localStorage（不包含密码）
-    const { password, ...userInfo } = userData;
-    localStorage.setItem('currentUser', JSON.stringify(userInfo));
-    setCurrentUser(userInfo);
-    return true;
+  const login = async (userData) => {
+    try {
+      // 存储用户信息到localStorage（不包含密码）
+      const { password, ...userInfo } = userData;
+      localStorage.setItem('currentUser', JSON.stringify(userInfo));
+      setCurrentUser(userInfo);
+      
+      // 同步用户数据到数据库
+      await syncUserDataToDatabase(userInfo);
+      
+      return true;
+    } catch (error) {
+      console.error('登录数据同步失败:', error);
+      // 即使数据库同步失败，登录仍然成功
+      return true;
+    }
   };
 
   // 注册函数

@@ -48,7 +48,7 @@ export default function Login() {
   };
 
   // 处理登录
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     
     // 简单验证
@@ -57,16 +57,21 @@ export default function Login() {
       return;
     }
     
-    // 验证用户凭据
-    const result = validateCredentials(formData.username, formData.password);
-    
-    if (result.success) {
-      // 登录成功
-      login(result.user);
-      navigate('/');
-    } else {
-      // 登录失败
-      setError(language === 'zh' ? '用户名或密码错误' : 'Invalid username or password');
+    try {
+      // 验证用户凭据
+      const result = validateCredentials(formData.username, formData.password);
+      
+      if (result.success) {
+        // 登录成功，同步数据到数据库
+        await login(result.user);
+        navigate('/');
+      } else {
+        // 登录失败
+        setError(language === 'zh' ? '用户名或密码错误' : 'Invalid username or password');
+      }
+    } catch (error) {
+      console.error('登录过程中出错:', error);
+      setError(language === 'zh' ? '登录过程中出现错误，请重试' : 'An error occurred during login, please try again');
     }
   };
 

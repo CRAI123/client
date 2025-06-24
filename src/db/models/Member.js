@@ -130,6 +130,25 @@ class Member {
     }
   }
 
+  // 更新会员VIP状态
+  async updateMemberVipStatus(memberId, vipStatus, vipLevel, vipExpiresAt) {
+    try {
+      const sql = await this.getConnection();
+      const result = await sql`
+        UPDATE members 
+        SET vip_level = ${vipLevel || 'basic'},
+            vip_expires_at = ${vipExpiresAt},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ${memberId}
+        RETURNING id, username, vip_level, vip_expires_at
+      `;
+      return { success: true, data: result[0] };
+    } catch (error) {
+      console.error('更新VIP状态失败:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
   // 获取所有会员（管理员功能）
   async getAllMembers(limit = 50, offset = 0) {
     try {
