@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Box, Typography, TextField, Button, Paper, Grid, useTheme, Divider, Snackbar, Alert } from '@mui/material';
+import { Box, Typography, TextField, Button, Paper, Grid, useTheme, Divider, Snackbar, Alert, CircularProgress } from '@mui/material';
 import EmailIcon from '@mui/icons-material/Email';
 import PhoneIcon from '@mui/icons-material/Phone';
 import SendIcon from '@mui/icons-material/Send';
+import { createContactTable, insertContactMessage } from '../api/database';
 
 function Contact() {
   const theme = useTheme();
@@ -16,6 +17,7 @@ function Contact() {
     message: '',
     severity: 'success'
   });
+  const [loading, setLoading] = useState(false);
   
   // 处理输入变化
   const handleInputChange = (e) => {
@@ -38,43 +40,89 @@ function Contact() {
       return;
     }
 
-    try {
-      // 创建带时间戳的联系信息对象
-      const contactData = {
-        ...formData,
-        timestamp: new Date().toISOString(),
-        id: Date.now() // 使用时间戳作为临时ID
-      };
-
-      // 获取现有联系信息
-      let contacts = JSON.parse(localStorage.getItem('contactMessages') || '[]');
-      
-      // 添加新联系信息
-      contacts.push(contactData);
-      
-      // 保存到localStorage
-      localStorage.setItem('contactMessages', JSON.stringify(contacts));
-
-      // 显示成功消息
+    // 验证邮箱格式
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
       setSnackbar({
         open: true,
-        message: '消息已发送',
-        severity: 'success'
-      });
-
-      // 重置表单
-      setFormData({
-        name: '',
-        email: '',
-        message: ''
-      });
-    } catch (error) {
-      console.error('提交表单时出错:', error);
-      setSnackbar({
-        open: true,
-        message: '发送失败，请稍后再试',
+        message: '请输入有效的邮箱地址',
         severity: 'error'
       });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // 确保联系消息表存在
+      await createContactTable();
+      
+      // 插入联系消息到数据库
+      const result = await insertContactMessage(
+        formData.name,
+        formData.email,
+        formData.message
+      );
+
+      if (result.success) {
+        // 显示成功消息
+        setSnackbar({
+          open: true,
+          message: '消息已成功发送到数据库！',
+          severity: 'success'
+        });
+
+        // 重置表单
+        setFormData({
+          name: '',
+          email: '',
+          message: ''
+        });
+
+        // 同时保存到localStorage作为备份
+        const contactData = {
+          ...formData,
+          timestamp: new Date().toISOString(),
+          id: result.data.id,
+          status: 'sent'
+        };
+        
+        let contacts = JSON.parse(localStorage.getItem('contactMessages') || '[]');
+        contacts.push(contactData);
+        localStorage.setItem('contactMessages', JSON.stringify(contacts));
+      } else {
+        throw new Error(result.error || '数据库操作失败');
+      }
+    } catch (error) {
+      console.error('提交表单时出错:', error);
+      
+      // 如果数据库操作失败，尝试保存到localStorage
+      try {
+        const contactData = {
+          ...formData,
+          timestamp: new Date().toISOString(),
+          id: Date.now(),
+          status: 'local_backup'
+        };
+        
+        let contacts = JSON.parse(localStorage.getItem('contactMessages') || '[]');
+        contacts.push(contactData);
+        localStorage.setItem('contactMessages', JSON.stringify(contacts));
+        
+        setSnackbar({
+          open: true,
+          message: '数据库连接失败，消息已保存到本地备份',
+          severity: 'warning'
+        });
+      } catch (localError) {
+        setSnackbar({
+          open: true,
+          message: '发送失败，请稍后再试',
+          severity: 'error'
+        });
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -229,17 +277,21 @@ function Contact() {
                 size="large"
                 fullWidth
                 onClick={handleSubmit}
+                disabled={loading}
                 sx={{ 
                   mt: 2,
                   px: { xs: 2, md: 3 },
                   py: { xs: 1, md: 1.2 },
                   borderRadius: '4px',
                   boxShadow: '0 0 15px rgba(0, 229, 255, 0.5)',
-                  // 发送消息按钮样式
+                  '&:disabled': {
+                    opacity: 0.6,
+                    boxShadow: 'none'
+                  }
                 }}
-                endIcon={<SendIcon />}
+                endIcon={loading ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
               >
-                发送消息
+                {loading ? '发送中...' : '发送消息'}
               </Button>
             </Box>
           </Paper>
