@@ -230,6 +230,33 @@ export const AuthProvider = ({ children }) => {
            currentUser.favorites && 
            currentUser.favorites.includes(resourceId);
   };
+
+  // 更新用户信息
+  const updateUser = (updatedUserData) => {
+    if (!currentUser) return false;
+    
+    try {
+      // 合并更新的用户数据
+      const updatedUser = {
+        ...currentUser,
+        ...updatedUserData,
+        updatedAt: new Date().toISOString()
+      };
+      
+      // 更新localStorage和状态
+      updateUserStorage(updatedUser);
+      
+      // 异步同步到数据库
+      syncUserDataToDatabase(updatedUser).catch(error => {
+        console.warn('用户数据同步到数据库失败:', error);
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('更新用户信息时出错:', error);
+      return false;
+    }
+  };
   
   // 提供的上下文值
   const value = {
@@ -242,6 +269,7 @@ export const AuthProvider = ({ children }) => {
     addFavorite,
     removeFavorite,
     isFavorite,
+    updateUser,
     isAuthenticated: !!currentUser
   };
 

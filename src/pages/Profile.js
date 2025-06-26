@@ -1,5 +1,5 @@
-import React, { useContext, useState, useEffect } from 'react';
-import { Box, Typography, Paper, List, ListItem, ListItemText, Divider, IconButton, Chip, Tab, Tabs, Alert } from '@mui/material';
+import React, { useState, useContext, useEffect } from 'react';
+import { Box, Typography, Paper, List, ListItem, ListItemText, Divider, IconButton, Chip, Tab, Tabs, Alert, Avatar, Button, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Badge, Tooltip } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { LanguageContext } from '../App';
 import { useAuth } from '../contexts/AuthContext';
@@ -7,13 +7,24 @@ import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import PersonIcon from '@mui/icons-material/Person';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import EditIcon from '@mui/icons-material/Edit';
+import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
+import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
+import DiamondIcon from '@mui/icons-material/Diamond';
+import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 
 export default function Profile() {
   const navigate = useNavigate();
   const { language } = useContext(LanguageContext);
-  const { currentUser, isAuthenticated, removeFavorite } = useAuth();
+  const { currentUser, isAuthenticated, removeFavorite, updateUser } = useAuth();
   const [tabValue, setTabValue] = useState(0);
   const [resources, setResources] = useState([]);
+  const [avatarDialogOpen, setAvatarDialogOpen] = useState(false);
+  const [signatureDialogOpen, setSignatureDialogOpen] = useState(false);
+  const [usernameDialogOpen, setUsernameDialogOpen] = useState(false);
+  const [newSignature, setNewSignature] = useState('');
+  const [newUsername, setNewUsername] = useState('');
+  const [avatarPreview, setAvatarPreview] = useState(null);
   
   // 如果用户未登录，重定向到登录页面
   useEffect(() => {
@@ -73,6 +84,113 @@ export default function Profile() {
   
   // 获取用户收藏的资源
   const favoriteResources = getFavoriteResources();
+
+  // 获取会员等级信息
+  const getMembershipInfo = () => {
+    if (!currentUser) return { level: 'basic', isVip: false, color: '#666', icon: PersonIcon };
+    
+    const vipLevel = currentUser.vipLevel || 'basic';
+    const isVip = currentUser.vipStatus || false;
+    
+    const levelConfig = {
+      basic: { 
+        name: language === 'zh' ? '普通用户' : 'Basic User', 
+        color: '#666', 
+        icon: PersonIcon,
+        bgColor: 'rgba(102, 102, 102, 0.1)'
+      },
+      silver: { 
+        name: language === 'zh' ? '银牌会员' : 'Silver Member', 
+        color: '#C0C0C0', 
+        icon: WorkspacePremiumIcon,
+        bgColor: 'rgba(192, 192, 192, 0.1)'
+      },
+      gold: { 
+        name: language === 'zh' ? '金牌会员' : 'Gold Member', 
+        color: '#FFD700', 
+        icon: EmojiEventsIcon,
+        bgColor: 'rgba(255, 215, 0, 0.1)'
+      },
+      diamond: { 
+        name: language === 'zh' ? '钻石会员' : 'Diamond Member', 
+        color: '#B9F2FF', 
+        icon: DiamondIcon,
+        bgColor: 'rgba(185, 242, 255, 0.1)'
+      }
+    };
+    
+    return { ...levelConfig[vipLevel], level: vipLevel, isVip };
+  };
+
+  // 处理头像上传
+  const handleAvatarUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setAvatarPreview(e.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // 保存头像
+  const handleSaveAvatar = () => {
+    if (avatarPreview && updateUser) {
+      const updatedUser = {
+        ...currentUser,
+        avatar: avatarPreview
+      };
+      updateUser(updatedUser);
+      setAvatarDialogOpen(false);
+      setAvatarPreview(null);
+    }
+  };
+
+  // 打开个性签名编辑对话框
+  const handleEditSignature = () => {
+    setNewSignature(currentUser?.signature || '');
+    setSignatureDialogOpen(true);
+  };
+
+  // 保存个性签名
+  const handleSaveSignature = () => {
+    if (updateUser) {
+      const updatedUser = {
+        ...currentUser,
+        signature: newSignature
+      };
+      updateUser(updatedUser);
+      setSignatureDialogOpen(false);
+    }
+  };
+
+  // 打开用户名编辑对话框
+  const handleEditUsername = () => {
+    setNewUsername(currentUser?.username || '');
+    setUsernameDialogOpen(true);
+  };
+
+  // 保存用户名
+  const handleSaveUsername = () => {
+    if (updateUser && newUsername.trim()) {
+      const updatedUser = {
+        ...currentUser,
+        username: newUsername.trim()
+      };
+      updateUser(updatedUser);
+      setUsernameDialogOpen(false);
+    }
+  };
+
+  // 获取会员到期时间
+  const getVipExpiryDate = () => {
+    if (!currentUser?.vipExpiresAt) return null;
+    const date = new Date(currentUser.vipExpiresAt);
+    return date.toLocaleDateString(language === 'zh' ? 'zh-CN' : 'en-US');
+  };
+
+  const membershipInfo = getMembershipInfo();
   
   // 分类名称映射
   const categoryNames = {
@@ -124,14 +242,130 @@ export default function Profile() {
           borderRadius: '8px',
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <PersonIcon sx={{ fontSize: 40, mr: 2, color: 'rgba(0, 229, 255, 0.7)' }} />
-          <Box>
-            <Typography variant="h6">{currentUser.username}</Typography>
-            <Typography variant="body2" color="text.secondary">{currentUser.email}</Typography>
+        {/* 头像和基本信息 */}
+        <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 3 }}>
+          <Box sx={{ position: 'relative', mr: 3 }}>
+            <Badge
+              overlap="circular"
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+              badgeContent={
+                <Tooltip title={language === 'zh' ? '更换头像' : 'Change Avatar'}>
+                  <IconButton
+                    size="small"
+                    onClick={() => setAvatarDialogOpen(true)}
+                    sx={{
+                      backgroundColor: 'rgba(0, 229, 255, 0.8)',
+                      color: 'white',
+                      '&:hover': {
+                        backgroundColor: 'rgba(0, 229, 255, 1)',
+                      },
+                      width: 28,
+                      height: 28
+                    }}
+                  >
+                    <PhotoCameraIcon sx={{ fontSize: 16 }} />
+                  </IconButton>
+                </Tooltip>
+              }
+            >
+              <Avatar
+                src={currentUser?.avatar}
+                sx={{
+                  width: 80,
+                  height: 80,
+                  border: `3px solid ${membershipInfo.color}`,
+                  boxShadow: `0 0 15px ${membershipInfo.color}40`
+                }}
+              >
+                {currentUser?.username?.charAt(0).toUpperCase()}
+              </Avatar>
+            </Badge>
+          </Box>
+          
+          <Box sx={{ flex: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+              <Typography variant="h5" sx={{ mr: 1 }}>{currentUser.username}</Typography>
+              <Tooltip title={language === 'zh' ? '编辑用户名' : 'Edit Username'}>
+                <IconButton
+                  size="small"
+                  onClick={handleEditUsername}
+                  sx={{
+                    color: 'rgba(0, 229, 255, 0.7)',
+                    '&:hover': {
+                      color: '#00e5ff',
+                      backgroundColor: 'rgba(0, 229, 255, 0.1)'
+                    },
+                    mr: 1
+                  }}
+                >
+                  <EditIcon sx={{ fontSize: 16 }} />
+                </IconButton>
+              </Tooltip>
+              <Chip
+                icon={React.createElement(membershipInfo.icon, { sx: { fontSize: 16 } })}
+                label={membershipInfo.name}
+                sx={{
+                  backgroundColor: membershipInfo.bgColor,
+                  color: membershipInfo.color,
+                  border: `1px solid ${membershipInfo.color}`,
+                  fontWeight: 'bold'
+                }}
+              />
+            </Box>
+            
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              {currentUser.email}
+            </Typography>
+            
+            {/* 个性签名 */}
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  fontStyle: 'italic',
+                  color: 'text.secondary',
+                  flex: 1,
+                  mr: 1
+                }}
+              >
+                {currentUser?.signature || (language === 'zh' ? '这个人很懒，什么都没留下...' : 'No signature yet...')}
+              </Typography>
+              <Tooltip title={language === 'zh' ? '编辑个性签名' : 'Edit Signature'}>
+                <IconButton
+                  size="small"
+                  onClick={handleEditSignature}
+                  sx={{ color: 'rgba(0, 229, 255, 0.7)' }}
+                >
+                  <EditIcon sx={{ fontSize: 16 }} />
+                </IconButton>
+              </Tooltip>
+            </Box>
+            
+            {/* 会员信息 */}
+            {membershipInfo.isVip && (
+              <Box sx={{ 
+                p: 1.5, 
+                borderRadius: 1, 
+                background: `linear-gradient(135deg, ${membershipInfo.color}20, ${membershipInfo.color}10)`,
+                border: `1px solid ${membershipInfo.color}40`,
+                mb: 2
+              }}>
+                <Typography variant="body2" sx={{ color: membershipInfo.color, fontWeight: 'bold' }}>
+                  {language === 'zh' ? '会员特权' : 'VIP Privileges'}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {getVipExpiryDate() && (
+                    `${language === 'zh' ? '到期时间' : 'Expires'}: ${getVipExpiryDate()}`
+                  )}
+                </Typography>
+              </Box>
+            )}
           </Box>
         </Box>
+        
         <Divider sx={{ my: 2 }} />
+        
+        {/* 统计信息 */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap' }}>
           <Box sx={{ mb: 1 }}>
             <Typography variant="body2" color="text.secondary">
@@ -146,6 +380,100 @@ export default function Profile() {
           </Box>
         </Box>
       </Paper>
+      
+      {/* 头像更换对话框 */}
+      <Dialog open={avatarDialogOpen} onClose={() => setAvatarDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>{language === 'zh' ? '更换头像' : 'Change Avatar'}</DialogTitle>
+        <DialogContent>
+          <Box sx={{ textAlign: 'center', py: 2 }}>
+            <Avatar
+              src={avatarPreview || currentUser?.avatar}
+              sx={{ width: 120, height: 120, mx: 'auto', mb: 2 }}
+            >
+              {currentUser?.username?.charAt(0).toUpperCase()}
+            </Avatar>
+            <input
+              accept="image/*"
+              style={{ display: 'none' }}
+              id="avatar-upload"
+              type="file"
+              onChange={handleAvatarUpload}
+            />
+            <label htmlFor="avatar-upload">
+              <Button
+                variant="outlined"
+                component="span"
+                startIcon={<PhotoCameraIcon />}
+                sx={{ mt: 1 }}
+              >
+                {language === 'zh' ? '选择图片' : 'Choose Image'}
+              </Button>
+            </label>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAvatarDialogOpen(false)}>
+            {language === 'zh' ? '取消' : 'Cancel'}
+          </Button>
+          <Button onClick={handleSaveAvatar} variant="contained" disabled={!avatarPreview}>
+            {language === 'zh' ? '保存' : 'Save'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      
+      {/* 个性签名编辑对话框 */}
+      <Dialog open={signatureDialogOpen} onClose={() => setSignatureDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>{language === 'zh' ? '编辑个性签名' : 'Edit Signature'}</DialogTitle>
+        <DialogContent>
+          <TextField
+            fullWidth
+            multiline
+            rows={3}
+            value={newSignature}
+            onChange={(e) => setNewSignature(e.target.value)}
+            placeholder={language === 'zh' ? '写下你的个性签名...' : 'Write your signature...'}
+            sx={{ mt: 1 }}
+            inputProps={{ maxLength: 100 }}
+          />
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+            {newSignature.length}/100
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setSignatureDialogOpen(false)}>
+            {language === 'zh' ? '取消' : 'Cancel'}
+          </Button>
+          <Button onClick={handleSaveSignature} variant="contained">
+            {language === 'zh' ? '保存' : 'Save'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 用户名编辑对话框 */}
+      <Dialog open={usernameDialogOpen} onClose={() => setUsernameDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>{language === 'zh' ? '编辑用户名' : 'Edit Username'}</DialogTitle>
+        <DialogContent>
+          <TextField
+            fullWidth
+            value={newUsername}
+            onChange={(e) => setNewUsername(e.target.value)}
+            placeholder={language === 'zh' ? '输入新的用户名...' : 'Enter new username...'}
+            sx={{ mt: 1 }}
+            inputProps={{ maxLength: 20 }}
+          />
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+            {newUsername.length}/20
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setUsernameDialogOpen(false)}>
+            {language === 'zh' ? '取消' : 'Cancel'}
+          </Button>
+          <Button onClick={handleSaveUsername} variant="contained" disabled={!newUsername.trim()}>
+            {language === 'zh' ? '保存' : 'Save'}
+          </Button>
+        </DialogActions>
+      </Dialog>
       
       {/* 标签页 */}
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
