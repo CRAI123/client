@@ -213,40 +213,68 @@ export const AuthProvider = ({ children }) => {
   // 验证用户登录凭据
   const validateCredentials = async (username, password) => {
     try {
-      // 哈希输入的密码
+      // 首先尝试从数据库验证
       const passwordHash = hashPassword(password);
-      
-      // 从数据库验证用户
       const dbResult = await validateUserLogin(username, passwordHash);
+      
       if (dbResult.success) {
-        return { success: true, user: dbResult.data };
+        return {
+          success: true,
+          user: {
+            username: dbResult.data.username,
+            email: dbResult.data.email,
+            joinDate: dbResult.data.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+            vipStatus: dbResult.data.vip_status || false,
+            vipLevel: dbResult.data.vip_level || 0,
+            vipExpiresAt: dbResult.data.vip_expires_at || null,
+            avatar: dbResult.data.avatar || null,
+            signature: dbResult.data.signature || ''
+          }
+        };
       }
       
-      // 如果数据库验证失败，尝试从localStorage验证（向后兼容）
+      // 如果数据库验证失败，回退到localStorage验证（向后兼容）
       const users = JSON.parse(localStorage.getItem('users') || '[]');
-      const user = users.find(u => 
-        u.username === username && u.password === password
-      );
+      const user = users.find(u => u.username === username && u.password === password);
       
       if (user) {
-        return { success: true, user };
-      } else {
-        return { success: false, message: '用户名或密码错误' };
+        // 如果在localStorage中找到用户，尝试将其迁移到数据库
+        try {
+          await createUsersTable();
+          const usernameExists = await checkUsernameExists(username);
+          if (!usernameExists.exists) {
+            await insertUser(username, user.email, hashPassword(password));
+            console.log('用户数据已迁移到数据库');
+          }
+        } catch (migrationError) {
+          console.warn('用户数据迁移失败:', migrationError);
+        }
+        
+        return {
+          success: true,
+          user: {
+            username: user.username,
+            email: user.email,
+            joinDate: user.joinDate,
+            vipStatus: user.vipStatus || false,
+            vipLevel: user.vipLevel || 0,
+            vipExpiresAt: user.vipExpiresAt || null,
+            avatar: user.avatar || null,
+            signature: user.signature || ''
+          }
+        };
       }
+      
+      return {
+        success: false,
+        message: '用户名或密码错误'
+      };
     } catch (error) {
-      console.error('验证用户凭据时出错:', error);
-      
-      // 数据库连接失败时，尝试从localStorage验证
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
-      const user = users.find(u => 
-        u.username === username && u.password === password
-      );
-      
-      if (user) {
-        return { success: true, user };
-      } else {
-        return { success: false, message: '用户名或密码错误' };
-      }
+      console.error('验证凭据时出错:', error);
+      return {
+        success: false,
+        message: '数据库连接错误'
+      };
     }
   };
 
