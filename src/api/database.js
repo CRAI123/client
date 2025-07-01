@@ -3,8 +3,34 @@
 
 import { neon } from '@neondatabase/serverless';
 
+// 浏览器兼容的密码哈希实现
+// 注意：这是一个简化的实现，生产环境中应该使用服务器端bcrypt
+const browserCrypto = {
+  hash: async (password, rounds = 12) => {
+    // 使用Web Crypto API进行哈希
+    const encoder = new TextEncoder();
+    const data = encoder.encode(password + 'salt_' + rounds);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return `browser_hash_${rounds}_${hashHex}`;
+  },
+  compare: async (password, hash) => {
+    if (!hash.startsWith('browser_hash_')) {
+      return false;
+    }
+    const parts = hash.split('_');
+    if (parts.length !== 4) return false;
+    const rounds = parseInt(parts[2]);
+    const expectedHash = await browserCrypto.hash(password, rounds);
+    return hash === expectedHash;
+  }
+};
+
+const bcrypt = browserCrypto;
+
 // 获取数据库版本信息
-export async function getDatabaseVersion() {
+async function getDatabaseVersion() {
   try {
     const sql = neon(process.env.REACT_APP_DATABASE_URL);
     const response = await sql`SELECT version()`;
@@ -22,7 +48,7 @@ export async function getDatabaseVersion() {
 }
 
 // 创建示例表
-export async function createSampleTable() {
+async function createSampleTable() {
   try {
     const sql = neon(process.env.REACT_APP_DATABASE_URL);
     await sql`
@@ -46,7 +72,7 @@ export async function createSampleTable() {
 }
 
 // 创建联系消息表
-export async function createContactTable() {
+async function createContactTable() {
   try {
     const sql = neon(process.env.REACT_APP_DATABASE_URL);
     await sql`
@@ -73,7 +99,7 @@ export async function createContactTable() {
 }
 
 // 插入评论
-export async function insertComment(comment) {
+async function insertComment(comment) {
   try {
     const sql = neon(process.env.REACT_APP_DATABASE_URL);
     const result = await sql`
@@ -95,7 +121,7 @@ export async function insertComment(comment) {
 }
 
 // 获取所有评论
-export async function getComments() {
+async function getComments() {
   try {
     const sql = neon(process.env.REACT_APP_DATABASE_URL);
     const result = await sql`
@@ -117,7 +143,7 @@ export async function getComments() {
 }
 
 // 插入联系消息
-export async function insertContactMessage(name, email, message) {
+async function insertContactMessage(name, email, message) {
   try {
     const sql = neon(process.env.REACT_APP_DATABASE_URL);
     const result = await sql`
@@ -139,7 +165,7 @@ export async function insertContactMessage(name, email, message) {
 }
 
 // 获取所有联系消息
-export async function getContactMessages() {
+async function getContactMessages() {
   try {
     const sql = neon(process.env.REACT_APP_DATABASE_URL);
     const result = await sql`
@@ -161,7 +187,7 @@ export async function getContactMessages() {
 }
 
 // 更新联系消息状态
-export async function updateContactMessageStatus(id, status) {
+async function updateContactMessageStatus(id, status) {
   try {
     const sql = neon(process.env.REACT_APP_DATABASE_URL);
     const result = await sql`
@@ -184,7 +210,7 @@ export async function updateContactMessageStatus(id, status) {
 }
 
 // 创建用户表
-export async function createUsersTable() {
+async function createUsersTable() {
   try {
     const sql = neon(process.env.REACT_APP_DATABASE_URL);
     await sql`
@@ -217,7 +243,7 @@ export async function createUsersTable() {
 }
 
 // 检查用户名是否存在
-export async function checkUsernameExists(username) {
+async function checkUsernameExists(username) {
   try {
     const sql = neon(process.env.REACT_APP_DATABASE_URL);
     const result = await sql`
@@ -237,7 +263,7 @@ export async function checkUsernameExists(username) {
 }
 
 // 检查邮箱是否存在
-export async function checkEmailExists(email) {
+async function checkEmailExists(email) {
   try {
     const sql = neon(process.env.REACT_APP_DATABASE_URL);
     const result = await sql`
@@ -256,64 +282,95 @@ export async function checkEmailExists(email) {
   }
 }
 
+// 使用bcrypt进行密码哈希
+async function hashPassword(password) {
+  const saltRounds = 12;
+  return await bcrypt.hash(password, saltRounds);
+}
+
+// 验证密码
+async function verifyPassword(password, hashedPassword) {
+  return await bcrypt.compare(password, hashedPassword);
+}
+
 // 插入新用户
-export async function insertUser(username, email, passwordHash) {
+async function insertUser(username, email, password) {
   try {
     const sql = neon(process.env.REACT_APP_DATABASE_URL);
+    const hashedPassword = await hashPassword(password);
+    
     const result = await sql`
-      INSERT INTO users (username, email, password_hash) 
-      VALUES (${username}, ${email}, ${passwordHash}) 
+      INSERT INTO users (username, email, password_hash, created_at)
+      VALUES (${username}, ${email}, ${hashedPassword}, NOW())
       RETURNING id, username, email, created_at, vip_status, vip_level
     `;
-    return {
-      success: true,
-      data: result[0]
-    };
+    
+    return { success: true, user: result[0] };
   } catch (error) {
-    console.error('Insert user error:', error);
-    return {
-      success: false,
-      error: error.message
-    };
+    console.error('插入用户失败:', error);
+    if (error.message.includes('duplicate key')) {
+      if (error.message.includes('username')) {
+        return { success: false, error: '用户名已存在' };
+      } else if (error.message.includes('email')) {
+        return { success: false, error: '邮箱已被注册' };
+      }
+    }
+    return { success: false, error: error.message };
   }
 }
 
 // 验证用户登录
-export async function validateUserLogin(username, passwordHash) {
+async function validateUserLogin(username, password) {
   try {
     const sql = neon(process.env.REACT_APP_DATABASE_URL);
-    const result = await sql`
-      SELECT id, username, email, created_at, vip_status, vip_level, vip_expires_at, avatar, signature
+    
+    // 首先获取用户的哈希密码
+    const userResult = await sql`
+      SELECT id, username, email, password_hash, created_at, vip_status, vip_level, vip_expires_at, avatar, signature
       FROM users 
-      WHERE username = ${username} AND password_hash = ${passwordHash}
+      WHERE username = ${username} OR email = ${username}
     `;
     
-    if (result.length > 0) {
-      // 更新最后登录时间
-      await sql`
-        UPDATE users 
-        SET last_login = CURRENT_TIMESTAMP 
-        WHERE id = ${result[0].id}
-      `;
-      
-      return {
-        success: true,
-        data: result[0]
-      };
+    if (userResult.length === 0) {
+      return { success: false, error: '用户名或密码错误' };
+    }
+    
+    const user = userResult[0];
+    
+    // 验证密码
+    const isPasswordValid = await verifyPassword(password, user.password_hash);
+    
+    if (isPasswordValid) {
+      // 返回用户信息（不包含密码）
+      const { password_hash: _, ...userWithoutPassword } = user;
+      return { success: true, data: userWithoutPassword };
     } else {
-      return {
-        success: false,
-        message: '用户名或密码错误'
-      };
+      return { success: false, error: '用户名或密码错误' };
     }
   } catch (error) {
-    console.error('Validate user login error:', error);
-    return {
-      success: false,
-      error: error.message
-    };
+    console.error('验证用户登录失败:', error);
+    return { success: false, error: error.message };
   }
 }
+
+// 导出所有函数
+export {
+  getDatabaseVersion,
+  createSampleTable,
+  createContactTable,
+  insertComment,
+  getComments,
+  insertContactMessage,
+  getContactMessages,
+  updateContactMessageStatus,
+  createUsersTable,
+  checkUsernameExists,
+  checkEmailExists,
+  insertUser,
+  validateUserLogin,
+  hashPassword,
+  verifyPassword
+};
 
 // Next.js API 路由处理函数示例
 // 在实际项目中，这个函数应该在 pages/api/database.js 或 app/api/database/route.js 中

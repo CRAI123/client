@@ -1,16 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { createUsersTable, checkUsernameExists, checkEmailExists, insertUser, validateUserLogin } from '../api/database';
+import MemberService from '../db/services/MemberService';
 
-// 简单的密码哈希函数（在生产环境中应使用更安全的哈希算法）
-function hashPassword(password) {
-  let hash = 0;
-  for (let i = 0; i < password.length; i++) {
-    const char = password.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // 转换为32位整数
-  }
-  return hash.toString();
-}
+// 密码哈希现在在数据库层处理，这里不再需要客户端哈希
 
 // 创建认证上下文
 export const AuthContext = createContext();
@@ -165,8 +157,8 @@ export const AuthProvider = ({ children }) => {
           return { success: false, message: '邮箱已被注册' };
         }
         
-        // 哈希密码
-        const passwordHash = hashPassword(userData.password);
+        // 密码哈希现在在数据库层处理
+        const passwordHash = userData.password;
         
         // 插入新用户到数据库
         const insertResult = await insertUser(userData.username, userData.email, passwordHash);
@@ -243,9 +235,8 @@ export const AuthProvider = ({ children }) => {
     try {
       // 首先尝试数据库验证（主要方式）
       try {
-        // 对密码进行哈希处理，因为数据库中存储的是哈希密码
-        const passwordHash = hashPassword(password);
-        const result = await validateUserLogin(username, passwordHash);
+        // 密码哈希在数据库层处理
+        const result = await validateUserLogin(username, password);
         
         if (result.success) {
           // 数据库验证成功，同步到localStorage
@@ -301,8 +292,7 @@ export const AuthProvider = ({ children }) => {
           await createUsersTable();
           const usernameCheck = await checkUsernameExists(username);
           if (!usernameCheck.exists) {
-            const passwordHash = hashPassword(password);
-            await insertUser(username, user.email, passwordHash);
+            await insertUser(username, user.email, password);
             console.log('用户数据已从localStorage迁移到数据库');
           }
         } catch (migrationError) {
