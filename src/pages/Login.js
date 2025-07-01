@@ -53,25 +53,41 @@ export default function Login() {
     
     // 简单验证
     if (!formData.username || !formData.password) {
-      setError(language === 'zh' ? '请填写所有字段' : 'Please fill in all fields');
+      setError(language === 'zh' ? '请填写用户名和密码' : 'Please enter username and password');
       return;
     }
     
+    setError('');
+    
     try {
       // 验证用户凭据
-      const result = validateCredentials(formData.username, formData.password);
+      const result = await validateCredentials(formData.username, formData.password);
       
       if (result.success) {
-        // 登录成功，同步数据到数据库
-        await login(result.user);
+        // 登录成功，调用login函数
+        login({
+          username: formData.username,
+          email: result.user?.email || '',
+          joinDate: result.user?.joinDate || new Date().toISOString().split('T')[0],
+          vipStatus: result.user?.vipStatus || false,
+          vipLevel: result.user?.vipLevel || 0,
+          vipExpiresAt: result.user?.vipExpiresAt || null,
+          avatar: result.user?.avatar || null,
+          signature: result.user?.signature || ''
+        });
+        
+        // 跳转到首页
         navigate('/');
       } else {
         // 登录失败
-        setError(language === 'zh' ? '用户名或密码错误' : 'Invalid username or password');
+        setError(language === 'zh' ? (result.message || '用户名或密码错误') : 
+          (result.message === '用户名或密码错误' ? 'Invalid username or password' :
+           result.message === '数据库连接错误' ? 'Database connection error' :
+           'Invalid username or password'));
       }
     } catch (error) {
       console.error('登录过程中出错:', error);
-      setError(language === 'zh' ? '登录过程中出现错误，请重试' : 'An error occurred during login, please try again');
+      setError(language === 'zh' ? '登录失败，请稍后重试' : 'Login failed, please try again later');
     }
   };
 

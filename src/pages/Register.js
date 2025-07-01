@@ -44,7 +44,7 @@ export default function Register() {
   };
 
   // 处理注册
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
     
     // 验证表单
@@ -72,36 +72,43 @@ export default function Register() {
       return;
     }
     
-    // 使用AuthContext的register函数注册用户
-    const result = register({
-      username: formData.username,
-      email: formData.email,
-      password: formData.password
-    });
-    
-    if (!result.success) {
-      // 注册失败
-      setError(language === 'zh' ? result.message : 
-        (result.message === '用户名已存在' ? 'Username already exists' : 
-         result.message === '邮箱已被注册' ? 'Email already registered' : 'Registration failed'));
-      return;
+    try {
+      // 使用AuthContext的register函数注册用户
+      const result = await register({
+        username: formData.username,
+        email: formData.email,
+        password: formData.password
+      });
+      
+      if (!result.success) {
+        // 注册失败
+        setError(language === 'zh' ? result.message : 
+          (result.message === '用户名已存在' ? 'Username already exists' : 
+           result.message === '邮箱已被注册' ? 'Email already registered' : 
+           result.message === '数据库连接错误' ? 'Database connection error' :
+           'Registration failed'));
+        return;
+      }
+      
+      // 显示成功消息
+      setSuccess(true);
+      
+      // 清空表单
+      setFormData({
+        username: '',
+        email: '',
+        password: '',
+        confirmPassword: ''
+      });
+      
+      // 3秒后跳转到登录页
+      setTimeout(() => {
+        navigate('/login');
+      }, 3000);
+    } catch (error) {
+      console.error('注册过程中出错:', error);
+      setError(language === 'zh' ? '注册失败，请稍后重试' : 'Registration failed, please try again later');
     }
-    
-    // 显示成功消息
-    setSuccess(true);
-    
-    // 清空表单
-    setFormData({
-      username: '',
-      email: '',
-      password: '',
-      confirmPassword: ''
-    });
-    
-    // 3秒后跳转到登录页
-    setTimeout(() => {
-      navigate('/login');
-    }, 3000);
   };
 
   // 切换密码可见性

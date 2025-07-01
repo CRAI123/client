@@ -1,5 +1,24 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import MemberService from '../db/services/MemberService.js';
+import { 
+  createUsersTable, 
+  checkUsernameExists, 
+  checkEmailExists, 
+  insertUser, 
+  validateUserLogin 
+} from '../api/database.js';
+
+// 简单的密码哈希函数（在生产环境中应使用更安全的哈希算法）
+const hashPassword = (password) => {
+  // 这里使用简单的哈希，实际项目中应使用bcrypt等安全库
+  let hash = 0;
+  for (let i = 0; i < password.length; i++) {
+    const char = password.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // 转换为32位整数
+  }
+  return Math.abs(hash).toString(16);
+};
 
 // 创建认证上下文
 export const AuthContext = createContext();
@@ -135,34 +154,54 @@ export const AuthProvider = ({ children }) => {
   };
 
   // 注册函数
-  const register = (userData) => {
-    // 从localStorage获取现有用户数据
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    
-    // 检查用户名是否已存在
-    if (users.some(user => user.username === userData.username)) {
-      return { success: false, message: '用户名已存在' };
+  const register = async (userData) => {
+    try {
+      // 首先确保用户表存在
+      await createUsersTable();
+      
+      // 检查用户名是否已存在
+      const usernameCheck = await checkUsernameExists(userData.username);
+      if (!usernameCheck.success) {
+        return { success: false, message: '数据库连接错误' };
+      }
+      if (usernameCheck.exists) {
+        return { success: false, message: '用户名已存在' };
+      }
+      
+      // 检查邮箱是否已存在
+      const emailCheck = await checkEmailExists(userData.email);
+      if (!emailCheck.success) {
+        return { success: false, message: '数据库连接错误' };
+      }
+      if (emailCheck.exists) {
+        return { success: false, message: '邮箱已被注册' };
+      }
+      
+      // 哈希密码
+      const passwordHash = hashPassword(userData.password);
+      
+      // 插入新用户到数据库
+      const insertResult = await insertUser(userData.username, userData.email, passwordHash);
+      if (!insertResult.success) {
+        return { success: false, message: '注册失败，请稍后重试' };
+      }
+      
+      // 同时保存到localStorage作为备份（不包含密码）
+      const users = JSON.parse(localStorage.getItem('users') || '[]');
+      const newUser = {
+        id: insertResult.data.id,
+        username: userData.username,
+        email: userData.email,
+        createdAt: insertResult.data.created_at
+      };
+      users.push(newUser);
+      localStorage.setItem('users', JSON.stringify(users));
+      
+      return { success: true, data: insertResult.data };
+    } catch (error) {
+      console.error('注册过程中出错:', error);
+      return { success: false, message: '注册失败，请稍后重试' };
     }
-    
-    // 检查邮箱是否已存在
-    if (users.some(user => user.email === userData.email)) {
-      return { success: false, message: '邮箱已被注册' };
-    }
-    
-    // 创建新用户
-    const newUser = {
-      id: Date.now(),
-      username: userData.username,
-      email: userData.email,
-      password: userData.password,
-      createdAt: new Date().toISOString()
-    };
-    
-    // 添加到用户列表并保存
-    users.push(newUser);
-    localStorage.setItem('users', JSON.stringify(users));
-    
-    return { success: true };
   };
 
   // 登出函数
@@ -172,16 +211,42 @@ export const AuthProvider = ({ children }) => {
   };
 
   // 验证用户登录凭据
-  const validateCredentials = (username, password) => {
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const user = users.find(u => 
-      u.username === username && u.password === password
-    );
-    
-    if (user) {
-      return { success: true, user };
-    } else {
-      return { success: false, message: '用户名或密码错误' };
+  const validateCredentials = async (username, password) => {
+    try {
+      // 哈希输入的密码
+      const passwordHash = hashPassword(password);
+      
+      // 从数据库验证用户
+      const dbResult = await validateUserLogin(username, passwordHash);
+      if (dbResult.success) {
+        return { success: true, user: dbResult.data };
+      }
+      
+      // 如果数据库验证失败，尝试从localStorage验证（向后兼容）
+      const users = JSON.parse(localStorage.getItem('users') || '[]');
+      const user = users.find(u => 
+        u.username === username && u.password === password
+      );
+      
+      if (user) {
+        return { success: true, user };
+      } else {
+        return { success: false, message: '用户名或密码错误' };
+      }
+    } catch (error) {
+      console.error('验证用户凭据时出错:', error);
+      
+      // 数据库连接失败时，尝试从localStorage验证
+      const users = JSON.parse(localStorage.getItem('users') || '[]');
+      const user = users.find(u => 
+        u.username === username && u.password === password
+      );
+      
+      if (user) {
+        return { success: true, user };
+      } else {
+        return { success: false, message: '用户名或密码错误' };
+      }
     }
   };
 
