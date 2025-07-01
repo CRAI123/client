@@ -243,7 +243,9 @@ export const AuthProvider = ({ children }) => {
     try {
       // 首先尝试数据库验证（主要方式）
       try {
-        const result = await validateUserLogin(username, password);
+        // 对密码进行哈希处理，因为数据库中存储的是哈希密码
+        const passwordHash = hashPassword(password);
+        const result = await validateUserLogin(username, passwordHash);
         
         if (result.success) {
           // 数据库验证成功，同步到localStorage
