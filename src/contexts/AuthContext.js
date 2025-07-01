@@ -1,24 +1,16 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import MemberService from '../db/services/MemberService.js';
-import { 
-  createUsersTable, 
-  checkUsernameExists, 
-  checkEmailExists, 
-  insertUser, 
-  validateUserLogin 
-} from '../api/database.js';
+import { createUsersTable, checkUsernameExists, checkEmailExists, insertUser, validateUserLogin } from '../api/database';
 
 // 简单的密码哈希函数（在生产环境中应使用更安全的哈希算法）
-const hashPassword = (password) => {
-  // 这里使用简单的哈希，实际项目中应使用bcrypt等安全库
+function hashPassword(password) {
   let hash = 0;
   for (let i = 0; i < password.length; i++) {
     const char = password.charCodeAt(i);
     hash = ((hash << 5) - hash) + char;
     hash = hash & hash; // 转换为32位整数
   }
-  return Math.abs(hash).toString(16);
-};
+  return hash.toString();
+}
 
 // 创建认证上下文
 export const AuthContext = createContext();
@@ -156,48 +148,84 @@ export const AuthProvider = ({ children }) => {
   // 注册函数
   const register = async (userData) => {
     try {
-      // 首先确保用户表存在
-      await createUsersTable();
-      
-      // 检查用户名是否已存在
-      const usernameCheck = await checkUsernameExists(userData.username);
-      if (!usernameCheck.success) {
-        return { success: false, message: '数据库连接错误' };
+      // 首先尝试数据库注册（主要方式）
+      try {
+        // 确保用户表存在
+        await createUsersTable();
+        
+        // 检查用户名是否已存在
+        const usernameCheck = await checkUsernameExists(userData.username);
+        if (usernameCheck.success && usernameCheck.exists) {
+          return { success: false, message: '用户名已存在' };
+        }
+        
+        // 检查邮箱是否已存在
+        const emailCheck = await checkEmailExists(userData.email);
+        if (emailCheck.success && emailCheck.exists) {
+          return { success: false, message: '邮箱已被注册' };
+        }
+        
+        // 哈希密码
+        const passwordHash = hashPassword(userData.password);
+        
+        // 插入新用户到数据库
+        const insertResult = await insertUser(userData.username, userData.email, passwordHash);
+        if (insertResult.success) {
+          // 数据库注册成功，同步到localStorage
+          const users = JSON.parse(localStorage.getItem('users') || '[]');
+          const newUser = {
+            id: insertResult.data.id,
+            username: userData.username,
+            email: userData.email,
+            password: userData.password, // 保存原始密码用于localStorage验证
+            joinDate: new Date().toISOString().split('T')[0],
+            vipStatus: false,
+            vipLevel: 0,
+            vipExpiresAt: null,
+            avatar: null,
+            signature: '',
+            createdAt: insertResult.data.created_at
+          };
+          users.push(newUser);
+          localStorage.setItem('users', JSON.stringify(users));
+          
+          return { success: true, data: insertResult.data };
+        }
+      } catch (dbError) {
+        console.warn('数据库注册失败，回退到localStorage注册:', dbError);
       }
-      if (usernameCheck.exists) {
-        return { success: false, message: '用户名已存在' };
-      }
       
-      // 检查邮箱是否已存在
-      const emailCheck = await checkEmailExists(userData.email);
-      if (!emailCheck.success) {
-        return { success: false, message: '数据库连接错误' };
-      }
-      if (emailCheck.exists) {
-        return { success: false, message: '邮箱已被注册' };
-      }
-      
-      // 哈希密码
-      const passwordHash = hashPassword(userData.password);
-      
-      // 插入新用户到数据库
-      const insertResult = await insertUser(userData.username, userData.email, passwordHash);
-      if (!insertResult.success) {
-        return { success: false, message: '注册失败，请稍后重试' };
-      }
-      
-      // 同时保存到localStorage作为备份（不包含密码）
+      // 回退到localStorage注册
       const users = JSON.parse(localStorage.getItem('users') || '[]');
+      const existingUser = users.find(u => u.username === userData.username || u.email === userData.email);
+      
+      if (existingUser) {
+        if (existingUser.username === userData.username) {
+          return { success: false, message: '用户名已存在' };
+        }
+        if (existingUser.email === userData.email) {
+          return { success: false, message: '邮箱已被注册' };
+        }
+      }
+      
+      // 保存到localStorage
       const newUser = {
-        id: insertResult.data.id,
+        id: Date.now(), // 使用时间戳作为ID
         username: userData.username,
         email: userData.email,
-        createdAt: insertResult.data.created_at
+        password: userData.password, // 保存原始密码用于localStorage验证
+        joinDate: new Date().toISOString().split('T')[0],
+        vipStatus: false,
+        vipLevel: 0,
+        vipExpiresAt: null,
+        avatar: null,
+        signature: '',
+        createdAt: new Date().toISOString()
       };
       users.push(newUser);
       localStorage.setItem('users', JSON.stringify(users));
       
-      return { success: true, data: insertResult.data };
+      return { success: true, data: newUser };
     } catch (error) {
       console.error('注册过程中出错:', error);
       return { success: false, message: '注册失败，请稍后重试' };
@@ -213,38 +241,67 @@ export const AuthProvider = ({ children }) => {
   // 验证用户登录凭据
   const validateCredentials = async (username, password) => {
     try {
-      // 首先尝试从数据库验证
-      const passwordHash = hashPassword(password);
-      const dbResult = await validateUserLogin(username, passwordHash);
-      
-      if (dbResult.success) {
-        return {
-          success: true,
-          user: {
-            username: dbResult.data.username,
-            email: dbResult.data.email,
-            joinDate: dbResult.data.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
-            vipStatus: dbResult.data.vip_status || false,
-            vipLevel: dbResult.data.vip_level || 0,
-            vipExpiresAt: dbResult.data.vip_expires_at || null,
-            avatar: dbResult.data.avatar || null,
-            signature: dbResult.data.signature || ''
+      // 首先尝试数据库验证（主要方式）
+      try {
+        const result = await validateUserLogin(username, password);
+        
+        if (result.success) {
+          // 数据库验证成功，同步到localStorage
+          const userData = {
+            id: result.data.id,
+            username: result.data.username,
+            email: result.data.email,
+            password: password, // 保存原始密码用于localStorage备份
+            joinDate: result.data.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+            vipStatus: result.data.vip_status || false,
+            vipLevel: result.data.vip_level || 0,
+            vipExpiresAt: result.data.vip_expires_at || null,
+            avatar: result.data.avatar || null,
+            signature: result.data.signature || '',
+            createdAt: result.data.created_at
+          };
+          
+          // 更新localStorage中的用户数据
+          const users = JSON.parse(localStorage.getItem('users') || '[]');
+          const existingIndex = users.findIndex(u => u.username === username);
+          if (existingIndex >= 0) {
+            users[existingIndex] = userData;
+          } else {
+            users.push(userData);
           }
-        };
+          localStorage.setItem('users', JSON.stringify(users));
+          
+          return {
+            success: true,
+            user: {
+              username: result.data.username,
+              email: result.data.email,
+              joinDate: result.data.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+              vipStatus: result.data.vip_status || false,
+              vipLevel: result.data.vip_level || 0,
+              vipExpiresAt: result.data.vip_expires_at || null,
+              avatar: result.data.avatar || null,
+              signature: result.data.signature || ''
+            }
+          };
+        }
+      } catch (dbError) {
+        console.warn('数据库验证失败，回退到localStorage验证:', dbError);
       }
       
-      // 如果数据库验证失败，回退到localStorage验证（向后兼容）
+      // 回退到localStorage验证
       const users = JSON.parse(localStorage.getItem('users') || '[]');
       const user = users.find(u => u.username === username && u.password === password);
       
       if (user) {
-        // 如果在localStorage中找到用户，尝试将其迁移到数据库
+        // 尝试将localStorage用户迁移到数据库
         try {
           await createUsersTable();
-          const usernameExists = await checkUsernameExists(username);
-          if (!usernameExists.exists) {
-            await insertUser(username, user.email, hashPassword(password));
-            console.log('用户数据已迁移到数据库');
+          const usernameCheck = await checkUsernameExists(username);
+          if (!usernameCheck.exists) {
+            const passwordHash = hashPassword(password);
+            await insertUser(username, user.email, passwordHash);
+            console.log('用户数据已从localStorage迁移到数据库');
           }
         } catch (migrationError) {
           console.warn('用户数据迁移失败:', migrationError);
@@ -273,7 +330,7 @@ export const AuthProvider = ({ children }) => {
       console.error('验证凭据时出错:', error);
       return {
         success: false,
-        message: '数据库连接错误'
+        message: '登录验证失败，请稍后重试'
       };
     }
   };
