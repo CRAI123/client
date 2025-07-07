@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { createUsersTable, checkUsernameExists, checkEmailExists, insertUser, validateUserLogin } from '../api/database';
-import MemberService from '../db/services/MemberService';
+// 移除数据库相关导入，只使用localStorage
+// import MemberService from '../services/MemberService';
 
-// 密码哈希现在在数据库层处理，这里不再需要客户端哈希
+// 使用localStorage进行用户数据管理
 
 // 创建认证上下文
 export const AuthContext = createContext();
@@ -11,7 +11,8 @@ export const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [memberService] = useState(() => new MemberService());
+  // 移除MemberService，使用localStorage作为主要存储
+  // const [memberService] = useState(() => new MemberService());
 
   // 初始化时从localStorage加载用户信息
   useEffect(() => {
@@ -37,84 +38,52 @@ export const AuthProvider = ({ children }) => {
     setCurrentUser(userData);
   };
 
-  // 同步用户数据到数据库
-  const syncUserDataToDatabase = async (userInfo) => {
+  // 简化的用户数据同步（仅使用localStorage）
+  const syncUserDataToLocalStorage = async (userInfo) => {
     try {
-      // 检查数据库中是否已存在该用户
-      const existingUser = await memberService.memberModel.getMemberByUsername(userInfo.username);
+      // 更新localStorage中的用户列表
+      const users = JSON.parse(localStorage.getItem('users') || '[]');
+      const existingIndex = users.findIndex(u => u.username === userInfo.username);
       
-      if (!existingUser.success || !existingUser.data) {
-        // 用户不存在，创建新用户记录
-        const memberData = {
-          username: userInfo.username,
-          email: userInfo.email || `${userInfo.username}@local.com`,
-          passwordHash: 'local_auth', // 标记为本地认证
-          vipStatus: userInfo.vipStatus || false,
-          vipLevel: userInfo.vipLevel || 'basic',
-          vipExpiresAt: userInfo.vipExpiresAt || null,
-          lastLogin: new Date().toISOString(),
-          metadata: {
-            source: 'localStorage',
-            syncedAt: new Date().toISOString(),
-            originalData: userInfo
-          }
-        };
-        
-        const createResult = await memberService.memberModel.createMember(memberData);
-        if (createResult.success) {
-          console.log('用户数据已同步到数据库:', createResult.data);
-        } else {
-          console.warn('用户数据同步失败:', createResult.error);
-        }
+      const userData = {
+        ...userInfo,
+        lastLogin: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      if (existingIndex >= 0) {
+        users[existingIndex] = userData;
       } else {
-        // 用户已存在，更新最后登录时间和相关信息
-        const updateResult = await memberService.memberModel.updateLastLogin(existingUser.data.id);
-        if (updateResult.success) {
-          console.log('用户登录时间已更新');
-        }
-        
-        // 同步VIP状态变化
-        if (userInfo.vipStatus !== existingUser.data.vip_status) {
-          await memberService.memberModel.updateMemberVipStatus(
-            existingUser.data.id,
-            userInfo.vipStatus,
-            userInfo.vipLevel,
-            userInfo.vipExpiresAt
-          );
-        }
+        users.push(userData);
       }
       
-      // 同步localStorage中的其他数据（如收藏、设置等）
-      await syncAdditionalUserData(userInfo);
+      localStorage.setItem('users', JSON.stringify(users));
+      console.log('用户数据已同步到localStorage');
       
     } catch (error) {
-      console.error('数据库同步过程中出错:', error);
+      console.error('localStorage同步过程中出错:', error);
       throw error;
     }
   };
 
-  // 同步其他用户数据（收藏、设置等）
-  const syncAdditionalUserData = async (userInfo) => {
+  // 简化的用户附加数据处理（仅记录日志）
+  const logUserData = (userInfo) => {
     try {
-      // 同步用户收藏数据
+      // 记录用户数据日志
       if (userInfo.favorites && userInfo.favorites.length > 0) {
-        // 这里可以添加收藏数据的同步逻辑
-        console.log('同步用户收藏数据:', userInfo.favorites);
+        console.log('用户收藏数据:', userInfo.favorites);
       }
       
-      // 同步用户设置
       if (userInfo.settings) {
-        // 这里可以添加用户设置的同步逻辑
-        console.log('同步用户设置:', userInfo.settings);
+        console.log('用户设置:', userInfo.settings);
       }
       
-      // 同步VIP密钥使用记录
       if (userInfo.usedVipKeys && userInfo.usedVipKeys.length > 0) {
-        console.log('同步VIP密钥使用记录:', userInfo.usedVipKeys);
+        console.log('VIP密钥使用记录:', userInfo.usedVipKeys);
       }
       
     } catch (error) {
-      console.error('同步附加用户数据失败:', error);
+      console.error('记录用户数据失败:', error);
     }
   };
 
@@ -126,68 +95,24 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('currentUser', JSON.stringify(userInfo));
       setCurrentUser(userInfo);
       
-      // 同步用户数据到数据库
-      await syncUserDataToDatabase(userInfo);
+      // 同步用户数据到localStorage
+      await syncUserDataToLocalStorage(userInfo);
+      
+      // 记录用户数据
+      logUserData(userInfo);
       
       return true;
     } catch (error) {
       console.error('登录数据同步失败:', error);
-      // 即使数据库同步失败，登录仍然成功
+      // 即使同步失败，登录仍然成功
       return true;
     }
   };
 
-  // 注册函数
+  // 注册函数（使用localStorage）
   const register = async (userData) => {
     try {
-      // 首先尝试数据库注册（主要方式）
-      try {
-        // 确保用户表存在
-        await createUsersTable();
-        
-        // 检查用户名是否已存在
-        const usernameCheck = await checkUsernameExists(userData.username);
-        if (usernameCheck.success && usernameCheck.exists) {
-          return { success: false, message: '用户名已存在' };
-        }
-        
-        // 检查邮箱是否已存在
-        const emailCheck = await checkEmailExists(userData.email);
-        if (emailCheck.success && emailCheck.exists) {
-          return { success: false, message: '邮箱已被注册' };
-        }
-        
-        // 密码哈希现在在数据库层处理
-        const passwordHash = userData.password;
-        
-        // 插入新用户到数据库
-        const insertResult = await insertUser(userData.username, userData.email, passwordHash);
-        if (insertResult.success) {
-          // 数据库注册成功，同步到localStorage
-          const users = JSON.parse(localStorage.getItem('users') || '[]');
-          const newUser = {
-            id: insertResult.data.id,
-            username: userData.username,
-            email: userData.email,
-            password: userData.password, // 保存原始密码用于localStorage验证
-            joinDate: new Date().toISOString().split('T')[0],
-            vipStatus: false,
-            vipLevel: 0,
-            vipExpiresAt: null,
-            avatar: null,
-            signature: '',
-            createdAt: insertResult.data.created_at
-          };
-          users.push(newUser);
-          localStorage.setItem('users', JSON.stringify(users));
-          
-          return { success: true, data: insertResult.data };
-        }
-      } catch (dbError) {
-        console.warn('数据库注册失败，回退到localStorage注册:', dbError);
-      }
-      
-      // 回退到localStorage注册
+      // 检查localStorage中的用户数据
       const users = JSON.parse(localStorage.getItem('users') || '[]');
       const existingUser = users.find(u => u.username === userData.username || u.email === userData.email);
       
@@ -200,7 +125,7 @@ export const AuthProvider = ({ children }) => {
         }
       }
       
-      // 保存到localStorage
+      // 创建新用户
       const newUser = {
         id: Date.now(), // 使用时间戳作为ID
         username: userData.username,
@@ -214,9 +139,11 @@ export const AuthProvider = ({ children }) => {
         signature: '',
         createdAt: new Date().toISOString()
       };
+      
       users.push(newUser);
       localStorage.setItem('users', JSON.stringify(users));
       
+      console.log('用户注册成功，已保存到localStorage');
       return { success: true, data: newUser };
     } catch (error) {
       console.error('注册过程中出错:', error);
@@ -230,78 +157,21 @@ export const AuthProvider = ({ children }) => {
     setCurrentUser(null);
   };
 
-  // 验证用户登录凭据
+  // 验证用户登录凭据（使用localStorage）
   const validateCredentials = async (username, password) => {
     try {
-      // 首先尝试数据库验证（主要方式）
-      try {
-        // 密码哈希在数据库层处理
-        const result = await validateUserLogin(username, password);
-        
-        if (result.success) {
-          // 数据库验证成功，同步到localStorage
-          const userData = {
-            id: result.data.id,
-            username: result.data.username,
-            email: result.data.email,
-            password: password, // 保存原始密码用于localStorage备份
-            joinDate: result.data.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
-            vipStatus: result.data.vip_status || false,
-            vipLevel: result.data.vip_level || 0,
-            vipExpiresAt: result.data.vip_expires_at || null,
-            avatar: result.data.avatar || null,
-            signature: result.data.signature || '',
-            createdAt: result.data.created_at
-          };
-          
-          // 更新localStorage中的用户数据
-          const users = JSON.parse(localStorage.getItem('users') || '[]');
-          const existingIndex = users.findIndex(u => u.username === username);
-          if (existingIndex >= 0) {
-            users[existingIndex] = userData;
-          } else {
-            users.push(userData);
-          }
-          localStorage.setItem('users', JSON.stringify(users));
-          
-          return {
-            success: true,
-            user: {
-              username: result.data.username,
-              email: result.data.email,
-              joinDate: result.data.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
-              vipStatus: result.data.vip_status || false,
-              vipLevel: result.data.vip_level || 0,
-              vipExpiresAt: result.data.vip_expires_at || null,
-              avatar: result.data.avatar || null,
-              signature: result.data.signature || ''
-            }
-          };
-        }
-      } catch (dbError) {
-        console.warn('数据库验证失败，回退到localStorage验证:', dbError);
-      }
-      
-      // 回退到localStorage验证
+      // 从localStorage验证用户
       const users = JSON.parse(localStorage.getItem('users') || '[]');
-      const user = users.find(u => u.username === username && u.password === password);
+      const user = users.find(u => 
+        (u.username === username || u.email === username) && u.password === password
+      );
       
       if (user) {
-        // 尝试将localStorage用户迁移到数据库
-        try {
-          await createUsersTable();
-          const usernameCheck = await checkUsernameExists(username);
-          if (!usernameCheck.exists) {
-            await insertUser(username, user.email, password);
-            console.log('用户数据已从localStorage迁移到数据库');
-          }
-        } catch (migrationError) {
-          console.warn('用户数据迁移失败:', migrationError);
-        }
-        
+        console.log('用户验证成功');
         return {
           success: true,
           user: {
+            id: user.id,
             username: user.username,
             email: user.email,
             joinDate: user.joinDate,
@@ -388,9 +258,9 @@ export const AuthProvider = ({ children }) => {
       // 更新localStorage和状态
       updateUserStorage(updatedUser);
       
-      // 异步同步到数据库
-      syncUserDataToDatabase(updatedUser).catch(error => {
-        console.warn('用户数据同步到数据库失败:', error);
+      // 异步同步到localStorage
+      syncUserDataToLocalStorage(updatedUser).catch(error => {
+        console.warn('用户数据同步到localStorage失败:', error);
       });
       
       return true;
