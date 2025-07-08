@@ -16,12 +16,7 @@ export default function Resources() {
   const { language } = useContext(LanguageContext);
   const { currentUser, isAuthenticated, addFavorite, removeFavorite, isFavorite } = useAuth();
 
-  // 检查用户是否已登录，如果未登录则重定向到登录页面
-  useEffect(() => {
-    if (!isAuthenticated) {
-      navigate('/login');
-    }
-  }, [isAuthenticated, navigate]);
+  // 移除登录验证，允许未登录用户访问资料分享页面
   const [resources, setResources] = useState([]);
   const [favoriteChanged, setFavoriteChanged] = useState(false);
   

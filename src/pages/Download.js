@@ -97,7 +97,7 @@ function Download() {
         {/* 桌面端 */}
         <Grid item xs={12} md={6}>
           <Card sx={{
-            background: 'rgba(30, 30, 30, 0.8)',
+            background: 'rgba(255, 255, 255, 0.95)',
             backdropFilter: 'blur(10px)',
             border: '1px solid rgba(0, 229, 255, 0.2)',
             borderRadius: '12px',
@@ -117,7 +117,7 @@ function Download() {
               }} />
               <Typography variant="h4" gutterBottom sx={{ 
                 fontWeight: 600,
-                color: 'white',
+                color: 'rgba(0, 0, 0, 0.8)',
                 mb: 2
               }}>
                 {language === 'zh' ? '桌面端' : 'Desktop'}
@@ -191,7 +191,7 @@ function Download() {
         {/* 移动端 */}
         <Grid item xs={12} md={6}>
           <Card sx={{
-            background: 'rgba(30, 30, 30, 0.8)',
+            background: 'rgba(255, 255, 255, 0.95)',
             backdropFilter: 'blur(10px)',
             border: '1px solid rgba(255, 0, 229, 0.2)',
             borderRadius: '12px',
@@ -211,7 +211,7 @@ function Download() {
               }} />
               <Typography variant="h4" gutterBottom sx={{ 
                 fontWeight: 600,
-                color: 'white',
+                color: 'rgba(0, 0, 0, 0.8)',
                 mb: 2
               }}>
                 {language === 'zh' ? '移动端' : 'Mobile'}
@@ -284,7 +284,7 @@ function Download() {
       <Paper sx={{
         mt: 6,
         p: 4,
-        background: 'rgba(20, 20, 20, 0.8)',
+        background: 'rgba(255, 255, 255, 0.95)',
         backdropFilter: 'blur(10px)',
         border: '1px solid rgba(0, 229, 255, 0.1)',
         borderRadius: '12px',
@@ -301,7 +301,7 @@ function Download() {
         
         <Grid container spacing={3}>
           <Grid item xs={12} md={6}>
-            <Typography variant="h6" gutterBottom sx={{ color: 'white', mb: 2 }}>
+            <Typography variant="h6" gutterBottom sx={{ color: 'rgba(0, 0, 0, 0.8)', mb: 2 }}>
               {language === 'zh' ? 'Windows 桌面端' : 'Windows Desktop'}
             </Typography>
             <Typography variant="body2" sx={{ color: theme.palette.text.secondary, lineHeight: 1.6 }}>
@@ -313,7 +313,7 @@ function Download() {
           </Grid>
           
           <Grid item xs={12} md={6}>
-            <Typography variant="h6" gutterBottom sx={{ color: 'white', mb: 2 }}>
+            <Typography variant="h6" gutterBottom sx={{ color: 'rgba(0, 0, 0, 0.8)', mb: 2 }}>
               {language === 'zh' ? '移动端' : 'Mobile'}
             </Typography>
             <Typography variant="body2" sx={{ color: theme.palette.text.secondary, lineHeight: 1.6 }}>

@@ -277,7 +277,7 @@ export default function Login() {
           p: 4, 
           width: '100%', 
           maxWidth: '500px',
-          background: 'rgba(30, 30, 30, 0.8)',
+          background: 'rgba(255, 255, 255, 0.95)',
           backdropFilter: 'blur(10px)',
           border: '1px solid rgba(0, 229, 255, 0.2)',
           borderRadius: '8px',
@@ -343,6 +343,7 @@ export default function Login() {
             }}
             sx={{
               '& .MuiOutlinedInput-root': {
+                color: 'rgba(0, 0, 0, 0.8)',
                 '& fieldset': {
                   borderColor: 'rgba(0, 229, 255, 0.3)',
                 },
@@ -352,6 +353,9 @@ export default function Login() {
                 '&.Mui-focused fieldset': {
                   borderColor: 'rgba(0, 229, 255, 0.7)',
                 },
+              },
+              '& .MuiInputLabel-root': {
+                color: 'rgba(0, 0, 0, 0.6)',
               },
             }}
           />
@@ -388,6 +392,7 @@ export default function Login() {
             }}
             sx={{
               '& .MuiOutlinedInput-root': {
+                color: 'rgba(0, 0, 0, 0.8)',
                 '& fieldset': {
                   borderColor: 'rgba(0, 229, 255, 0.3)',
                 },
@@ -397,6 +402,9 @@ export default function Login() {
                 '&.Mui-focused fieldset': {
                   borderColor: 'rgba(0, 229, 255, 0.7)',
                 },
+              },
+              '& .MuiInputLabel-root': {
+                color: 'rgba(0, 0, 0, 0.6)',
               },
             }}
           />
@@ -421,7 +429,7 @@ export default function Login() {
           </Button>
           
           <Box sx={{ textAlign: 'center', mt: 2 }}>
-            <Typography variant="body2">
+            <Typography variant="body2" sx={{ color: 'rgba(0, 0, 0, 0.7)' }}>
               {language === 'zh' ? '还没有账号？' : 'Don\'t have an account? '}
               <Link 
                 component={RouterLink} 

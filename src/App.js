@@ -1,14 +1,13 @@
 import React, { useState, createContext, useContext } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import { AppBar, Toolbar, Typography, Container, Button, Box, useTheme, IconButton, Menu, MenuItem } from '@mui/material';
-import CodeIcon from '@mui/icons-material/Code';
-import TranslateIcon from '@mui/icons-material/Translate';
+
 import PersonIcon from '@mui/icons-material/Person';
 import LogoutIcon from '@mui/icons-material/Logout';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import Home from './pages/Home';
 import About from './pages/About';
-import Portfolio from './pages/Portfolio';
+
 import Contact from './pages/Contact';
 import Resources from './pages/Resources';
 import ArticleDetail from './pages/ArticleDetail';
@@ -17,6 +16,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Profile from './pages/Profile';
 import Download from './pages/Download';
+import PriceList from './pages/PriceList';
 import Footer from './components/Footer';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import VipZone from './pages/VipZone';
@@ -114,9 +114,9 @@ function UserMenu() {
 
 // 导航栏组件
 function NavigationBar() {
-  const theme = useTheme();
   const navigate = useNavigate();
   const { language, toggleLanguage } = useContext(LanguageContext);
+  const [languageMenuAnchor, setLanguageMenuAnchor] = useState(null);
   
   return (
     <AppBar position="static" elevation={0}>
@@ -144,25 +144,66 @@ function NavigationBar() {
         </Typography>
         <Button color="primary" onClick={() => navigate('/')} sx={{ mx: 0.8 }}>{language === 'zh' ? '首页' : 'Home'}</Button>
         <Button color="primary" onClick={() => navigate('/about')} sx={{ mx: 0.8 }}>{language === 'zh' ? '关于我' : 'About'}</Button>
-        <Button color="primary" onClick={() => navigate('/portfolio')} sx={{ mx: 0.8 }}>{language === 'zh' ? '作品集' : 'Portfolio'}</Button>
+
         <Button color="primary" onClick={() => navigate('/resources')} sx={{ mx: 0.8 }}>{language === 'zh' ? '资料分享' : 'Resources'}</Button>
+        <Button color="primary" onClick={() => navigate('/price-list')} sx={{ mx: 0.8 }}>{language === 'zh' ? '价格表' : 'Price List'}</Button>
         <Button color="primary" onClick={() => navigate('/download')} sx={{ mx: 0.8 }}>{language === 'zh' ? '应用下载' : 'Download'}</Button>
         <Button color="primary" onClick={() => navigate('/vip-zone')} sx={{ mx: 0.8, color: '#FFD700', '&:hover': { backgroundColor: 'rgba(255, 215, 0, 0.1)' } }}>{language === 'zh' ? '会员专区' : 'VIP Zone'}</Button>
         <Button color="primary" onClick={() => navigate('/contact')} sx={{ mx: 0.8 }}>{language === 'zh' ? '联系方式' : 'Contact'}</Button>
         
         <UserMenu />
         
-        <IconButton 
-          color="primary" 
-          onClick={toggleLanguage}
+        <Button
+          color="primary"
+          onClick={(event) => setLanguageMenuAnchor(event.currentTarget)}
           sx={{ 
             ml: 1, 
             border: '1px solid rgba(99, 102, 241, 0.3)',
-            '&:hover': { backgroundColor: 'rgba(99, 102, 241, 0.1)' }
+            '&:hover': { backgroundColor: 'rgba(99, 102, 241, 0.1)' },
+            minWidth: 'auto',
+            px: 2
           }}
         >
-          <TranslateIcon />
-        </IconButton>
+          {language === 'zh' ? '中文' : 'English'}
+        </Button>
+        <Menu
+          anchorEl={languageMenuAnchor}
+          open={Boolean(languageMenuAnchor)}
+          onClose={() => setLanguageMenuAnchor(null)}
+          PaperProps={{
+            sx: {
+              background: 'rgba(255, 255, 255, 0.95)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(99, 102, 241, 0.2)',
+              color: '#1e293b',
+            }
+          }}
+        >
+          <MenuItem 
+            onClick={() => {
+              if (language !== 'zh') toggleLanguage();
+              setLanguageMenuAnchor(null);
+            }}
+            sx={{ 
+              backgroundColor: language === 'zh' ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
+              '&:hover': { backgroundColor: 'rgba(99, 102, 241, 0.1)' }
+            }}
+          >
+            中文
+          </MenuItem>
+          <MenuItem 
+            onClick={() => {
+              if (language !== 'en') toggleLanguage();
+              setLanguageMenuAnchor(null);
+            }}
+            sx={{ 
+              backgroundColor: language === 'en' ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
+              '&:hover': { backgroundColor: 'rgba(99, 102, 241, 0.1)' }
+            }}
+          >
+            English
+          </MenuItem>
+        </Menu>
       </Toolbar>
     </AppBar>
   );
@@ -209,9 +250,10 @@ function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/about" element={<About />} />
-            <Route path="/portfolio" element={<Portfolio />} />
+
             <Route path="/contact" element={<Contact />} />
             <Route path="/resources" element={<Resources />} />
+            <Route path="/price-list" element={<PriceList />} />
             <Route path="/download" element={<Download />} />
             <Route path="/article/:category/:id" element={<ArticleDetail />} />
             <Route path="/admin" element={<Admin />} />
