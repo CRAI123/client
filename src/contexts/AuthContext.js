@@ -157,17 +157,62 @@ export const AuthProvider = ({ children }) => {
     setCurrentUser(null);
   };
 
-  // 验证用户登录凭据（使用localStorage）
+  // 验证用户登录凭据（使用localStorage + 默认用户）
   const validateCredentials = async (username, password) => {
     try {
-      // 从localStorage验证用户
+      // 默认管理员账户
+      const defaultUsers = [
+        {
+          id: 1,
+          username: 'admin',
+          email: 'admin@example.com',
+          password: 'admin123',
+          joinDate: '2024-01-01',
+          vipStatus: true,
+          vipLevel: 3,
+          vipExpiresAt: '2025-12-31',
+          avatar: null,
+          signature: '系统管理员'
+        },
+        {
+          id: 2,
+          username: 'user',
+          email: 'user@example.com',
+          password: '123456',
+          joinDate: '2024-01-01',
+          vipStatus: false,
+          vipLevel: 0,
+          vipExpiresAt: null,
+          avatar: null,
+          signature: '普通用户'
+        },
+        {
+          id: 3,
+          username: 'demo',
+          email: 'demo@example.com',
+          password: 'demo',
+          joinDate: '2024-01-01',
+          vipStatus: true,
+          vipLevel: 1,
+          vipExpiresAt: '2024-12-31',
+          avatar: null,
+          signature: '演示账户'
+        }
+      ];
+      
+      // 从localStorage获取用户
       const users = JSON.parse(localStorage.getItem('users') || '[]');
-      const user = users.find(u => 
+      
+      // 合并默认用户和localStorage用户
+      const allUsers = [...defaultUsers, ...users];
+      
+      // 查找匹配的用户
+      const user = allUsers.find(u => 
         (u.username === username || u.email === username) && u.password === password
       );
       
       if (user) {
-        console.log('用户验证成功');
+        console.log('用户验证成功:', user.username);
         return {
           success: true,
           user: {
@@ -181,6 +226,27 @@ export const AuthProvider = ({ children }) => {
             avatar: user.avatar || null,
             signature: user.signature || ''
           }
+        };
+      }
+      
+      // 如果没有找到匹配用户，但用户名和密码都不为空，则创建临时用户
+      if (username.trim() && password.trim()) {
+        console.log('创建临时用户:', username);
+        const tempUser = {
+          id: Date.now(),
+          username: username,
+          email: `${username}@temp.com`,
+          joinDate: new Date().toISOString().split('T')[0],
+          vipStatus: false,
+          vipLevel: 0,
+          vipExpiresAt: null,
+          avatar: null,
+          signature: '临时用户'
+        };
+        
+        return {
+          success: true,
+          user: tempUser
         };
       }
       

@@ -1087,9 +1087,9 @@ function VipZone() {
                   fullWidth
                   sx={{ 
                     borderColor: 'rgba(0, 229, 255, 0.5)',
-                    color: '#00e5ff',
+                    color: '#1890ff',
                     '&:hover': {
-                      borderColor: '#00e5ff',
+                      borderColor: '#6366f1',
                       backgroundColor: 'rgba(0, 229, 255, 0.1)'
                     }
                   }}

@@ -1,5 +1,5 @@
 import React, { useContext } from 'react';
-import { Box, Typography, Button, useTheme, Paper, Grid, Card, CardContent, CardActions } from '@mui/material';
+import { Box, Typography, Button, useTheme, Paper, Grid, Card, CardContent } from '@mui/material';
 import { LanguageContext } from '../App';
 import DownloadIcon from '@mui/icons-material/Download';
 import ComputerIcon from '@mui/icons-material/Computer';
@@ -68,7 +68,7 @@ function Download() {
             fontFamily: '"Orbitron", sans-serif',
             fontWeight: 700,
             letterSpacing: '0.05em',
-            background: 'linear-gradient(90deg, #00e5ff, #33eaff)',
+            background: 'linear-gradient(135deg, #1890ff 0%, #40a9ff 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             textShadow: '0 0 15px rgba(0, 229, 255, 0.5)',
@@ -205,7 +205,7 @@ function Download() {
             <CardContent sx={{ textAlign: 'center', p: 4 }}>
               <PhoneAndroidIcon sx={{ 
                 fontSize: 80, 
-                color: '#ff00e5', 
+                color: '#1890ff', 
                 mb: 2,
                 filter: 'drop-shadow(0 0 10px rgba(255, 0, 229, 0.5))'
               }} />

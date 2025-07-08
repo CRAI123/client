@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-route
 import { AppBar, Toolbar, Typography, Container, Button, Box, useTheme, IconButton, Menu, MenuItem } from '@mui/material';
 import CodeIcon from '@mui/icons-material/Code';
 import TranslateIcon from '@mui/icons-material/Translate';
-import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import PersonIcon from '@mui/icons-material/Person';
 import LogoutIcon from '@mui/icons-material/Logout';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
@@ -56,8 +55,8 @@ function UserMenu() {
           onClick={handleMenuOpen}
           sx={{ 
             mx: 0.8,
-            border: '1px solid rgba(0, 229, 255, 0.3)',
-            '&:hover': { backgroundColor: 'rgba(0, 229, 255, 0.1)' }
+            border: '1px solid rgba(99, 102, 241, 0.3)',
+            '&:hover': { backgroundColor: 'rgba(99, 102, 241, 0.1)' }
           }}
         >
           <AccountCircleIcon />
@@ -68,10 +67,10 @@ function UserMenu() {
           onClose={handleMenuClose}
           PaperProps={{
             sx: {
-              background: 'rgba(30, 30, 30, 0.9)',
+              background: 'rgba(255, 255, 255, 0.95)',
               backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(0, 229, 255, 0.2)',
-              color: 'white',
+              border: '1px solid rgba(99, 102, 241, 0.2)',
+              color: '#1e293b',
             }
           }}
         >
@@ -81,13 +80,13 @@ function UserMenu() {
             </Typography>
           </MenuItem>
           <MenuItem onClick={() => { handleMenuClose(); navigate('/profile'); }}>
-            <AccountCircleIcon fontSize="small" sx={{ mr: 1, color: 'rgba(0, 229, 255, 0.7)' }} />
+            <AccountCircleIcon fontSize="small" sx={{ mr: 1, color: 'rgba(99, 102, 241, 0.7)' }} />
             <Typography variant="body2">
               {language === 'zh' ? '个人中心' : 'Profile'}
             </Typography>
           </MenuItem>
           <MenuItem onClick={handleLogout}>
-            <LogoutIcon fontSize="small" sx={{ mr: 1, color: 'rgba(0, 229, 255, 0.7)' }} />
+            <LogoutIcon fontSize="small" sx={{ mr: 1, color: 'rgba(99, 102, 241, 0.7)' }} />
             <Typography variant="body2">
               {language === 'zh' ? '登出' : 'Logout'}
             </Typography>
@@ -104,8 +103,8 @@ function UserMenu() {
       startIcon={<PersonIcon />}
       sx={{ 
         mx: 0.8,
-        border: '1px solid rgba(0, 229, 255, 0.3)',
-        '&:hover': { backgroundColor: 'rgba(0, 229, 255, 0.1)' }
+        border: '1px solid rgba(99, 102, 241, 0.3)',
+        '&:hover': { backgroundColor: 'rgba(99, 102, 241, 0.1)' }
       }}
     >
       {language === 'zh' ? '登录' : 'Login'}
@@ -120,20 +119,26 @@ function NavigationBar() {
   const { language, toggleLanguage } = useContext(LanguageContext);
   
   return (
-    <AppBar position="static" elevation={0} sx={{ 
-      background: 'linear-gradient(90deg, rgba(18,18,18,0.9) 0%, rgba(30,30,30,0.9) 100%)',
-      borderBottom: '1px solid rgba(0, 229, 255, 0.2)'
-    }}>
+    <AppBar position="static" elevation={0}>
       <Toolbar>
-        <CodeIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
+        <img 
+          src="/favicon.ico" 
+          alt="CR Studio Logo" 
+          style={{ 
+            width: 32, 
+            height: 32, 
+            marginRight: 8, 
+            objectFit: 'contain' 
+          }} 
+        />
         <Typography variant="h6" component="div" sx={{ 
           flexGrow: 1, 
-          fontFamily: '"Orbitron", sans-serif',
-          letterSpacing: '0.05em',
-          background: 'linear-gradient(90deg, #00e5ff, #33eaff)',
+          fontFamily: '"Inter", sans-serif',
+          letterSpacing: '0.02em',
+          background: 'linear-gradient(90deg, #6366f1, #8b5cf6)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
-          textShadow: '0 0 10px rgba(0, 229, 255, 0.5)'
+          fontWeight: 700
         }}>
           CR Studio
         </Typography>
@@ -152,8 +157,8 @@ function NavigationBar() {
           onClick={toggleLanguage}
           sx={{ 
             ml: 1, 
-            border: '1px solid rgba(0, 229, 255, 0.3)',
-            '&:hover': { backgroundColor: 'rgba(0, 229, 255, 0.1)' }
+            border: '1px solid rgba(99, 102, 241, 0.3)',
+            '&:hover': { backgroundColor: 'rgba(99, 102, 241, 0.1)' }
           }}
         >
           <TranslateIcon />
@@ -164,7 +169,6 @@ function NavigationBar() {
 }
 
 function App() {
-  const theme = useTheme();
   const [language, setLanguage] = useState('zh'); // 默认中文
   
   // 切换语言函数
@@ -177,7 +181,7 @@ function App() {
       <AuthProvider>
         <Router>
           <Box sx={{ 
-            background: 'linear-gradient(to right, #121212, #1e1e1e)',
+            background: 'linear-gradient(to right, #ffffff, #f8fafc)',
             minHeight: '100vh',
             backgroundSize: 'cover',
             position: 'relative',
@@ -190,7 +194,7 @@ function App() {
               left: 0,
               right: 0,
               bottom: 0,
-              background: 'radial-gradient(circle at 50% 50%, rgba(0, 229, 255, 0.05) 0%, rgba(0, 0, 0, 0) 70%)',
+              background: 'radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.03) 0%, rgba(255, 255, 255, 0) 70%)',
               pointerEvents: 'none',
             }
           }}>

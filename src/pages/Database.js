@@ -47,7 +47,7 @@ function Database() {
           fontFamily: '"Orbitron", sans-serif',
           fontWeight: 700,
           letterSpacing: '0.05em',
-          background: 'linear-gradient(90deg, #00e5ff, #33eaff)',
+          background: 'linear-gradient(90deg, #6366f1, #8b5cf6)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
           textShadow: '0 0 15px rgba(0, 229, 255, 0.3)',
@@ -112,8 +112,8 @@ function Database() {
         </Typography>
         
         <Box component="pre" sx={{ 
-          backgroundColor: '#1e1e1e', 
-          color: '#d4d4d4', 
+          backgroundColor: theme.palette.background.paper,
+        color: theme.palette.text.primary, 
           p: 2, 
           borderRadius: 1,
           overflow: 'auto',

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Box, Typography, Paper, List, ListItem, ListItemText, Divider, Button, Chip, IconButton, Tooltip } from '@mui/material';
+import { Box, Typography, Paper, List, ListItem, ListItemText, Divider, Button, Chip, IconButton, Tooltip, useTheme } from '@mui/material';
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -12,6 +12,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 export default function Resources() {
   const navigate = useNavigate();
+  const theme = useTheme();
   const { language } = useContext(LanguageContext);
   const { currentUser, isAuthenticated, addFavorite, removeFavorite, isFavorite } = useAuth();
 
@@ -199,7 +200,7 @@ export default function Resources() {
               <Typography variant="h6" gutterBottom>
                 {language === 'zh' ? '原文链接' : 'Original Link'}:
               </Typography>
-              <Paper elevation={1} sx={{ p: 2, backgroundColor: '#f5f5f5' }}>
+              <Paper elevation={1} sx={{ p: 2, backgroundColor: theme.palette.background.paper }}>
                 <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>
                   {selectedResource.link}
                 </Typography>
@@ -257,7 +258,7 @@ export default function Resources() {
                           edge="end" 
                           aria-label="favorite"
                           onClick={(event) => handleToggleFavorite(event, resource.id)}
-                          sx={{ color: isFavorite(resource.id) ? '#00e5ff' : 'rgba(255, 255, 255, 0.5)' }}
+                          sx={{ color: isFavorite(resource.id) ? '#1890ff' : theme.palette.text.secondary }}
                         >
                           {isFavorite(resource.id) ? <StarIcon /> : <StarBorderIcon />}
                         </IconButton>

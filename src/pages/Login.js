@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Box, Typography, TextField, Button, Paper, Alert, Link, InputAdornment, IconButton, Divider, Grid } from '@mui/material';
+import { Box, Typography, TextField, Button, Paper, Alert, Link, InputAdornment, IconButton } from '@mui/material';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { LanguageContext } from '../App';
 import { useAuth } from '../contexts/AuthContext';
@@ -261,7 +261,7 @@ export default function Login() {
           fontFamily: '"Orbitron", sans-serif',
           fontWeight: 700,
           letterSpacing: '0.05em',
-          background: 'linear-gradient(90deg, #00e5ff, #33eaff)',
+          background: 'linear-gradient(90deg, #6366f1, #8b5cf6)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
           textShadow: '0 0 15px rgba(0, 229, 255, 0.5)',
@@ -294,7 +294,7 @@ export default function Login() {
               flex: 1,
               borderColor: 'rgba(0, 229, 255, 0.5)',
               color: loginMode === 'password' ? '#000' : 'rgba(0, 229, 255, 0.8)',
-              background: loginMode === 'password' ? 'linear-gradient(90deg, #00e5ff, #33eaff)' : 'transparent'
+              background: loginMode === 'password' ? 'linear-gradient(90deg, #6366f1, #8b5cf6)' : 'transparent'
             }}
           >
             {language === 'zh' ? '密码登录' : 'Password Login'}
@@ -307,7 +307,7 @@ export default function Login() {
               flex: 1,
               borderColor: 'rgba(0, 229, 255, 0.5)',
               color: loginMode === 'wechat' ? '#000' : 'rgba(0, 229, 255, 0.8)',
-              background: loginMode === 'wechat' ? 'linear-gradient(90deg, #00e5ff, #33eaff)' : 'transparent'
+              background: loginMode === 'wechat' ? 'linear-gradient(90deg, #6366f1, #8b5cf6)' : 'transparent'
             }}
           >
             {language === 'zh' ? '微信登录' : 'WeChat Login'}
@@ -318,6 +318,8 @@ export default function Login() {
             {error}
           </Alert>
         )}
+        
+
         
         {loginMode === 'password' ? (
           <form onSubmit={handleLogin}>
@@ -407,10 +409,10 @@ export default function Login() {
               mt: 3, 
               mb: 2,
               py: 1.2,
-              background: 'linear-gradient(90deg, #00e5ff, #33eaff)',
+              background: 'linear-gradient(90deg, #6366f1, #8b5cf6)',
               boxShadow: '0 0 15px rgba(0, 229, 255, 0.5)',
               '&:hover': {
-                background: 'linear-gradient(90deg, #33eaff, #00e5ff)',
+                background: 'linear-gradient(90deg, #8b5cf6, #6366f1)',
                 boxShadow: '0 0 20px rgba(0, 229, 255, 0.7)',
               }
             }}
@@ -425,7 +427,7 @@ export default function Login() {
                 component={RouterLink} 
                 to="/register" 
                 sx={{ 
-                  color: '#00e5ff',
+                  color: '#6366f1',
                   textDecoration: 'none',
                   '&:hover': {
                     textDecoration: 'underline',
@@ -492,9 +494,9 @@ export default function Login() {
                   }}
                   startIcon={<QrCodeIcon />}
                   sx={{
-                    background: 'linear-gradient(90deg, #00e5ff, #33eaff)',
+                    background: 'linear-gradient(90deg, #6366f1, #8b5cf6)',
                     '&:hover': {
-                      background: 'linear-gradient(90deg, #33eaff, #00e5ff)'
+                      background: 'linear-gradient(90deg, #8b5cf6, #6366f1)'
                     }
                   }}
                 >

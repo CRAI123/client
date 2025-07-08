@@ -161,7 +161,7 @@ export default function Register() {
           fontFamily: '"Orbitron", sans-serif',
           fontWeight: 700,
           letterSpacing: '0.05em',
-          background: 'linear-gradient(90deg, #00e5ff, #33eaff)',
+          background: 'linear-gradient(90deg, #6366f1, #8b5cf6)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
           textShadow: '0 0 15px rgba(0, 229, 255, 0.5)',
@@ -367,7 +367,7 @@ export default function Register() {
               background: 'linear-gradient(90deg, #00e5ff, #33eaff)',
               boxShadow: '0 0 15px rgba(0, 229, 255, 0.5)',
               '&:hover': {
-                background: 'linear-gradient(90deg, #33eaff, #00e5ff)',
+                background: 'linear-gradient(90deg, #8b5cf6, #6366f1)',
                 boxShadow: '0 0 20px rgba(0, 229, 255, 0.7)',
               }
             }}
@@ -382,7 +382,7 @@ export default function Register() {
                 component={RouterLink} 
                 to="/login" 
                 sx={{ 
-                  color: '#00e5ff',
+                  color: '#6366f1',
                   textDecoration: 'none',
                   '&:hover': {
                     textDecoration: 'underline',

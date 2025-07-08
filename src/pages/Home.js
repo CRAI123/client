@@ -52,7 +52,7 @@ function Home() {
             fontFamily: '"Orbitron", sans-serif',
             fontWeight: 700,
             letterSpacing: '0.05em',
-            background: 'linear-gradient(90deg, #00e5ff, #33eaff)',
+            background: 'linear-gradient(90deg, #1890ff, #40a9ff)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             textShadow: '0 0 15px rgba(0, 229, 255, 0.5)',

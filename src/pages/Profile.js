@@ -1,10 +1,9 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { Box, Typography, Paper, List, ListItem, ListItemText, Divider, IconButton, Chip, Tab, Tabs, Alert, Avatar, Button, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Badge, Tooltip } from '@mui/material';
+import { Box, Typography, Paper, List, ListItem, Divider, IconButton, Chip, Tab, Tabs, Alert, Avatar, Button, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Badge, Tooltip } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { LanguageContext } from '../App';
 import { useAuth } from '../contexts/AuthContext';
 import StarIcon from '@mui/icons-material/Star';
-import StarBorderIcon from '@mui/icons-material/StarBorder';
 import PersonIcon from '@mui/icons-material/Person';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import EditIcon from '@mui/icons-material/Edit';
@@ -219,13 +218,13 @@ export default function Profile() {
           display: 'flex',
           alignItems: 'center',
           fontFamily: '"Orbitron", sans-serif',
-          background: 'linear-gradient(90deg, #00e5ff, #33eaff)',
+          background: 'linear-gradient(90deg, #6366f1, #8b5cf6)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
           textShadow: '0 0 10px rgba(0, 229, 255, 0.5)'
         }}
       >
-        <AccountCircleIcon sx={{ mr: 1, color: '#00e5ff' }} />
+        <AccountCircleIcon sx={{ mr: 1, color: '#6366f1' }} />
         {language === 'zh' ? '个人中心' : 'Profile'}
       </Typography>
       <Divider sx={{ mb: 3 }} />
@@ -292,7 +291,7 @@ export default function Profile() {
                   sx={{
                     color: 'rgba(0, 229, 255, 0.7)',
                     '&:hover': {
-                      color: '#00e5ff',
+                      color: '#6366f1',
                       backgroundColor: 'rgba(0, 229, 255, 0.1)'
                     },
                     mr: 1
@@ -487,7 +486,7 @@ export default function Profile() {
             label={language === 'zh' ? '收藏的资源' : 'Favorites'} 
             sx={{ 
               '&.Mui-selected': {
-                color: '#00e5ff',
+                color: '#6366f1',
               }
             }}
           />
@@ -524,7 +523,7 @@ export default function Profile() {
                         sx={{ 
                           flex: 1, 
                           cursor: 'pointer',
-                          '&:hover': { color: '#00e5ff' }
+                          '&:hover': { color: '#6366f1' }
                         }}
                       >
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
@@ -536,7 +535,7 @@ export default function Profile() {
                               ml: 1, 
                               backgroundColor: 'rgba(0, 229, 255, 0.1)',
                               border: '1px solid rgba(0, 229, 255, 0.3)',
-                              color: '#00e5ff'
+                              color: '#6366f1'
                             }} 
                           />
                         </Box>
@@ -547,7 +546,7 @@ export default function Profile() {
                       <IconButton 
                         onClick={() => handleRemoveFavorite(resource.id)}
                         sx={{ 
-                          color: '#00e5ff',
+                          color: '#6366f1',
                           ml: { xs: 0, sm: 2 },
                           mt: { xs: 1, sm: 0 },
                           alignSelf: { xs: 'flex-end', sm: 'center' }
@@ -556,8 +555,9 @@ export default function Profile() {
                         <StarIcon />
                       </IconButton>
                     </ListItem>
-                    {resource.id !== favoriteResources[favoriteResources.length - 1].id && 
-                      <Divider sx={{ borderColor: 'rgba(255, 255, 255, 0.1)' }} />}
+                    {favoriteResources.indexOf(resource) < favoriteResources.length - 1 && (
+                      <Divider sx={{ borderColor: 'rgba(255, 255, 255, 0.1)' }} />
+                    )}
                   </React.Fragment>
                 ))}
               </List>
@@ -566,9 +566,8 @@ export default function Profile() {
             <Alert 
               severity="info" 
               sx={{ 
-                background: 'rgba(30, 30, 30, 0.8)',
-                color: 'white',
-                border: '1px solid rgba(0, 229, 255, 0.2)'
+                backgroundColor: 'rgba(0, 229, 255, 0.1)',
+                border: '1px solid rgba(0, 229, 255, 0.3)'
               }}
             >
               {language === 'zh' ? '你还没有收藏任何资源' : 'You haven\'t favorited any resources yet'}

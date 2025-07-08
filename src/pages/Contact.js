@@ -153,7 +153,7 @@ function Contact() {
           fontFamily: '"Orbitron", sans-serif',
           fontWeight: 700,
           letterSpacing: '0.05em',
-          background: 'linear-gradient(90deg, #00e5ff, #33eaff)',
+          background: 'linear-gradient(90deg, #6366f1, #8b5cf6)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
           textShadow: '0 0 15px rgba(0, 229, 255, 0.3)',
@@ -216,7 +216,7 @@ function Contact() {
                         borderColor: 'rgba(0, 229, 255, 0.5)',
                       },
                       '&.Mui-focused fieldset': {
-                        borderColor: '#00e5ff',
+                        borderColor: '#1890ff',
                       },
                     }
                   }
@@ -240,7 +240,7 @@ function Contact() {
                         borderColor: 'rgba(0, 229, 255, 0.5)',
                       },
                       '&.Mui-focused fieldset': {
-                        borderColor: '#00e5ff',
+                        borderColor: '#1890ff',
                       },
                     }
                   }
@@ -266,7 +266,7 @@ function Contact() {
                         borderColor: 'rgba(0, 229, 255, 0.5)',
                       },
                       '&.Mui-focused fieldset': {
-                        borderColor: '#00e5ff',
+                        borderColor: '#6366f1',
                       },
                     }
                   }

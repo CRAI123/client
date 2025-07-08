@@ -42,7 +42,7 @@ function About() {
           fontFamily: '"Orbitron", sans-serif',
           fontWeight: 700,
           letterSpacing: '0.05em',
-          background: 'linear-gradient(90deg, #00e5ff, #33eaff)',
+          background: 'linear-gradient(90deg, #6366f1, #8b5cf6)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
           textShadow: '0 0 15px rgba(0, 229, 255, 0.3)',
@@ -192,7 +192,7 @@ function About() {
                     justifyContent: 'center',
                     boxShadow: '0 0 10px rgba(255, 0, 229, 0.5)'
                   }}>
-                    <EmojiEventsIcon sx={{ fontSize: 12, color: '#ff00e5' }} />
+                    <EmojiEventsIcon sx={{ fontSize: 12, color: '#1890ff' }} />
                   </Box>
                   
                   {/* 比赛内容 */}
@@ -210,7 +210,7 @@ function About() {
                       mb: 0.5,
                       fontSize: '1rem'
                     }}>
-                      {item.title} · <span style={{ color: '#ff00e5' }}>{item.result}</span>
+                      {item.title} · <span style={{ color: '#1890ff' }}>{item.result}</span>
                     </Typography>
                     <Typography variant="body2" sx={{ 
                       color: theme.palette.text.secondary,
@@ -230,7 +230,7 @@ function About() {
         p: 3, 
         mt: 4,
         borderTop: '3px solid #00e5ff',
-        background: 'linear-gradient(135deg, rgba(18, 18, 18, 0.9) 0%, rgba(30, 30, 30, 0.95) 100%)',
+        background: 'linear-gradient(135deg, #1890ff 0%, #40a9ff 100%)',
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
           <CodeIcon sx={{ color: theme.palette.primary.main, mr: 1 }} />
@@ -268,7 +268,7 @@ function About() {
                     backgroundColor: 'rgba(0, 229, 255, 0.1)',
                     '& .MuiLinearProgress-bar': {
                       borderRadius: 3,
-                      background: 'linear-gradient(90deg, #00e5ff, #33eaff)'
+                      background: 'linear-gradient(90deg, #6366f1, #8b5cf6)'
                     }
                   }}
                 />

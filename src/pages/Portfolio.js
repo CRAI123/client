@@ -142,7 +142,7 @@ function Portfolio() {
         gutterBottom
         sx={{ 
           fontFamily: '"Orbitron", sans-serif',
-          background: 'linear-gradient(90deg, #00e5ff, #33eaff)',
+          background: 'linear-gradient(135deg, #1890ff 0%, #40a9ff 100%)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
           textShadow: '0 0 10px rgba(0, 229, 255, 0.5)'
@@ -181,7 +181,7 @@ function Portfolio() {
                     variant="h6" 
                     component="div"
                     sx={{
-                      color: '#00e5ff',
+                      color: '#1890ff',
                       fontWeight: 500
                     }}
                   >
@@ -209,7 +209,7 @@ function Portfolio() {
                         size="small"
                         sx={{
                           backgroundColor: 'rgba(0, 229, 255, 0.1)',
-                          color: '#00e5ff',
+                          color: '#1890ff',
                           border: '1px solid rgba(0, 229, 255, 0.3)',
                           mt: 1
                         }}
@@ -223,7 +223,7 @@ function Portfolio() {
                         startIcon={<ArticleIcon />}
                         onClick={(e) => handleReadArticle(e, project)}
                         sx={{
-                          color: '#00e5ff',
+                          color: '#1890ff',
                           borderColor: 'rgba(0, 229, 255, 0.3)',
                           '&:hover': {
                             backgroundColor: 'rgba(0, 229, 255, 0.1)',
@@ -238,7 +238,7 @@ function Portfolio() {
                     <IconButton
                       onClick={(e) => handleToggleFavorite(e, project.id)}
                       sx={{
-                        color: '#00e5ff',
+                        color: '#1890ff',
                         '&:hover': {
                           backgroundColor: 'rgba(0, 229, 255, 0.1)'
                         }
@@ -276,7 +276,7 @@ function Portfolio() {
         {selectedProject && (
           <>
             <DialogTitle sx={{ 
-              color: '#00e5ff',
+              color: '#1890ff',
               fontFamily: '"Orbitron", sans-serif',
               pb: 0
             }}>
@@ -294,7 +294,7 @@ function Portfolio() {
                     }
                   },
                   '& .MuiTabs-indicator': {
-                    backgroundColor: '#00e5ff'
+                    backgroundColor: '#1890ff'
                   }
                 }}
               >
@@ -314,7 +314,7 @@ function Portfolio() {
                       style={{ width: '100%', maxHeight: '400px', objectFit: 'contain' }}
                     />
                   </Box>
-                  <Typography variant="h6" gutterBottom sx={{ color: '#00e5ff' }}>
+                  <Typography variant="h6" gutterBottom sx={{ color: '#1890ff' }}>
                     {language === 'zh' ? '技术栈' : 'Technologies'}
                   </Typography>
                   <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mb: 3 }}>
@@ -324,14 +324,14 @@ function Portfolio() {
                         label={tech}
                         sx={{
                           backgroundColor: 'rgba(0, 229, 255, 0.1)',
-                          color: '#00e5ff',
+                          color: '#1890ff',
                           border: '1px solid rgba(0, 229, 255, 0.3)',
                           mb: 1
                         }}
                       />
                     ))}
                   </Stack>
-                  <Typography variant="h6" gutterBottom sx={{ color: '#00e5ff' }}>
+                  <Typography variant="h6" gutterBottom sx={{ color: '#1890ff' }}>
                     {language === 'zh' ? '项目描述' : 'Project Description'}
                   </Typography>
                   <Typography paragraph sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
@@ -345,7 +345,7 @@ function Portfolio() {
                         onClick={(e) => handleLinkClick(selectedProject.githubUrl, e)}
                         sx={{
                           borderColor: 'rgba(0, 229, 255, 0.3)',
-                          color: '#00e5ff',
+                          color: '#1890ff',
                           '&:hover': {
                             borderColor: 'rgba(0, 229, 255, 0.5)',
                             backgroundColor: 'rgba(0, 229, 255, 0.1)'
@@ -362,7 +362,7 @@ function Portfolio() {
                         onClick={(e) => handleLinkClick(selectedProject.demoUrl, e)}
                         sx={{
                           borderColor: 'rgba(0, 229, 255, 0.3)',
-                          color: '#00e5ff',
+                          color: '#1890ff',
                           '&:hover': {
                             borderColor: 'rgba(0, 229, 255, 0.5)',
                             backgroundColor: 'rgba(0, 229, 255, 0.1)'
@@ -383,21 +383,21 @@ function Portfolio() {
                       color: 'rgba(255, 255, 255, 0.9)',
                       lineHeight: 1.8,
                       '& h1': {
-                        color: '#00e5ff',
+                        color: '#1890ff',
                         fontSize: '1.5rem',
                         fontWeight: 600,
                         mb: 2,
                         mt: 3
                       },
                       '& h2': {
-                        color: '#00e5ff',
+                        color: '#1890ff',
                         fontSize: '1.3rem',
                         fontWeight: 500,
                         mb: 1.5,
                         mt: 2.5
                       },
                       '& h3': {
-                        color: '#00e5ff',
+                        color: '#1890ff',
                         fontSize: '1.1rem',
                         fontWeight: 500,
                         mb: 1,
@@ -407,7 +407,7 @@ function Portfolio() {
                         mb: 1.5
                       },
                       '& strong': {
-                        color: '#00e5ff',
+                        color: '#1890ff',
                         fontWeight: 600
                       },
                       '& ul, & ol': {
@@ -442,7 +442,7 @@ function Portfolio() {
               <Button 
                 onClick={handleCloseDialog}
                 sx={{
-                  color: '#00e5ff',
+                  color: '#1890ff',
                   '&:hover': {
                     backgroundColor: 'rgba(0, 229, 255, 0.1)'
                   }

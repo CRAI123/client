@@ -17,8 +17,9 @@ function Footer() {
       sx={{
         py: 8,
         mt: 'auto',
-        backgroundColor: '#121212',
-        color: 'white'
+        backgroundColor: theme.palette.background.paper,
+        color: theme.palette.text.primary,
+        borderTop: `1px solid ${theme.palette.divider}`
       }}
     >
       {/* 提示消息 */}
@@ -41,7 +42,7 @@ function Footer() {
               sx={{ 
                 fontFamily: '"Orbitron", sans-serif',
                 mb: 3,
-                background: 'linear-gradient(90deg, #00e5ff, #33eaff)',
+                background: 'linear-gradient(135deg, #1890ff 0%, #40a9ff 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 textShadow: '0 0 10px rgba(0, 229, 255, 0.5)'
@@ -99,7 +100,7 @@ function Footer() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 sx={{
-                  backgroundColor: '#1e1e1e',
+                  backgroundColor: theme.palette.background.paper,
                   borderRadius: '4px 0 0 4px',
                   '& .MuiOutlinedInput-root': {
                     '& fieldset': {
