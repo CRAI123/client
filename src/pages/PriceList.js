@@ -1,14 +1,8 @@
 import React, { useContext } from 'react';
-import { Box, Typography, Grid, Card, CardContent, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
+import { Box, Typography, Grid, Card, CardContent } from '@mui/material';
 import { LanguageContext } from '../App';
-import StarIcon from '@mui/icons-material/Star';
-import FavoriteIcon from '@mui/icons-material/Favorite';
-import ChatIcon from '@mui/icons-material/Chat';
-import SportsEsportsIcon from '@mui/icons-material/SportsEsports';
 import PhoneIcon from '@mui/icons-material/Phone';
 import MessageIcon from '@mui/icons-material/Message';
-import SchoolIcon from '@mui/icons-material/School';
-import ComputerIcon from '@mui/icons-material/Computer';
 
 // 添加CSS动画样式
 const floatAnimation = `
@@ -147,351 +141,76 @@ function PriceList() {
           {priceData.title}
         </Typography>
         
-        <Box sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          gap: 1,
-          mb: 2
-        }}>
-          <Typography sx={{ fontSize: '1.5rem' }}>🌟</Typography>
-          <Typography 
-            variant="h6" 
-            sx={{ 
-              color: '#CD853F',
-              fontFamily: '"Comic Sans MS", "Microsoft YaHei", cursive',
-              fontWeight: 'bold'
-            }}
-          >
-            {language === 'zh' ? '主播' : 'Streamer'}
-          </Typography>
-          <Typography sx={{ fontSize: '1.5rem' }}>🌟</Typography>
-        </Box>
+
       </Box>
 
-      {/* 价格表主体 */}
+      {/* 价格表主体 - 使用图片替换 */}
       <Box sx={{ 
         maxWidth: '800px', 
         mx: 'auto',
         position: 'relative',
-        zIndex: 1
+        zIndex: 1,
+        mb: 4
       }}>
-        {priceData.sections.map((section, sectionIndex) => (
-          <Box key={sectionIndex} sx={{ mb: 4 }}>
-            {/* 卷轴样式的卡片 */}
-            <Card sx={{
-              background: 'linear-gradient(135deg, #FFFEF7 0%, #FFF8DC 100%)',
-              borderRadius: '20px',
-              border: '3px solid #DEB887',
-              boxShadow: '0 8px 25px rgba(139, 69, 19, 0.2)',
-              position: 'relative',
-              overflow: 'visible',
-              '&::before': {
-                content: '""',
-                position: 'absolute',
-                top: -10,
-                left: -10,
-                right: -10,
-                bottom: -10,
-                background: 'linear-gradient(135deg, #F4A460 0%, #DEB887 100%)',
-                borderRadius: '25px',
-                zIndex: -1,
-                opacity: 0.3
-              }
-            }}>              
-              <CardContent sx={{ p: 3 }}>                
-                {/* 板块标题 */}
-                <Box sx={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center',
-                  mb: 3,
-                  p: 2,
-                  background: `linear-gradient(135deg, ${section.color}40 0%, ${section.color}20 100%)`,
-                  borderRadius: '15px',
-                  border: `2px solid ${section.color}`,
-                  position: 'relative'
-                }}>
-                  <Typography sx={{ fontSize: '2rem', mr: 2 }}>{section.icon}</Typography>
-                  <Typography 
-                    variant="h5" 
-                    sx={{ 
-                      color: '#8B4513',
-                      fontWeight: 'bold',
-                      fontFamily: '"Comic Sans MS", "Microsoft YaHei", cursive',
-                      textShadow: '1px 1px 2px rgba(139, 69, 19, 0.3)'
-                    }}
-                  >
-                    {section.title}
-                  </Typography>
-                </Box>
-                
-                {/* 服务项目列表 */}
-                <Box>
-                  {section.items.map((item, itemIndex) => (
-                    <Box key={itemIndex} sx={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      p: 2,
-                      mb: 1,
-                      background: item.service.includes(language === 'zh' ? '备注' : 'Note') 
-                        ? 'linear-gradient(135deg, #F0E68C30 0%, #F0E68C20 100%)'
-                        : 'linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.4) 100%)',
-                      borderRadius: '12px',
-                      border: item.service.includes(language === 'zh' ? '备注' : 'Note')
-                        ? '1px dashed #DAA520'
-                        : '1px solid #DEB887',
-                      transition: 'all 0.2s ease',
-                      '&:hover': {
-                        background: item.service.includes(language === 'zh' ? '备注' : 'Note')
-                          ? 'linear-gradient(135deg, #F0E68C50 0%, #F0E68C30 100%)'
-                          : 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.6) 100%)',
-                        transform: 'translateX(5px)'
-                      }
-                    }}>
-                      <Typography 
-                        variant="body1" 
-                        sx={{ 
-                          color: '#8B4513',
-                          fontWeight: item.service.includes(language === 'zh' ? '备注' : 'Note') ? 'normal' : 'bold',
-                          fontFamily: '"Microsoft YaHei", sans-serif',
-                          fontSize: item.service.includes(language === 'zh' ? '备注' : 'Note') ? '0.9rem' : '1rem'
-                        }}
-                      >
-                        {item.service}
-                      </Typography>
-                      <Typography 
-                        variant="body1" 
-                        sx={{ 
-                          color: item.service.includes(language === 'zh' ? '备注' : 'Note') ? '#B8860B' : '#CD853F',
-                          fontWeight: 'bold',
-                          fontFamily: 'monospace',
-                          fontSize: item.service.includes(language === 'zh' ? '备注' : 'Note') ? '0.9rem' : '1rem'
-                        }}
-                      >
-                        {item.price}
-                      </Typography>
-                    </Box>
-                  ))}
-                </Box>
-              </CardContent>
-            </Card>
-          </Box>
-        ))}
-      </Box>
-      
-      {/* 价格表卡片 */}
-      <Grid container spacing={3}>
-        {priceData.sections.map((category, categoryIndex) => (
-          <Grid item xs={12} md={6} key={categoryIndex}>
-            <Card sx={{
-              background: `linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%)`,
-              backdropFilter: 'blur(15px)',
-              border: `2px solid ${category.color}40`,
-              borderRadius: '20px',
-              transition: 'all 0.3s ease-in-out',
-              '&:hover': {
-                transform: 'translateY(-8px) scale(1.02)',
-                boxShadow: `0 15px 35px ${category.color}30`,
-                border: `2px solid ${category.color}80`
-              },
-              overflow: 'hidden',
-              position: 'relative'
+        <Card sx={{
+          background: 'linear-gradient(135deg, #FFFEF7 0%, #FFF8DC 100%)',
+          borderRadius: '20px',
+          border: '3px solid #DEB887',
+          boxShadow: '0 8px 25px rgba(139, 69, 19, 0.2)',
+          position: 'relative',
+          overflow: 'hidden',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: -10,
+            left: -10,
+            right: -10,
+            bottom: -10,
+            background: 'linear-gradient(135deg, #F4A460 0%, #DEB887 100%)',
+            borderRadius: '25px',
+            zIndex: -1,
+            opacity: 0.3
+          }
+        }}>              
+          <CardContent sx={{ p: 3, textAlign: 'center' }}>                
+            {/* 价格表图片 */}
+            <Box sx={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              mb: 2
             }}>
-              {/* 装饰性背景 */}
-              <Box sx={{
-                position: 'absolute',
-                top: -50,
-                right: -50,
-                width: 100,
-                height: 100,
-                background: `radial-gradient(circle, ${category.color}20 0%, transparent 70%)`,
-                borderRadius: '50%'
-              }} />
-              
-              <CardContent sx={{ p: 3, position: 'relative', zIndex: 1 }}>
-                {/* 标题部分 */}
-                <Box sx={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  mb: 3,
-                  p: 2,
-                  background: `linear-gradient(135deg, ${category.color}20 0%, ${category.color}10 100%)`,
+              <img 
+                src="/images/7dcfd8a12237ebc7367cd34763501bc6.jpg"
+                alt={language === 'zh' ? 'CR Studio 价格表' : 'CR Studio Price List'}
+                style={{
+                  maxWidth: '100%',
+                  height: 'auto',
                   borderRadius: '15px',
-                  border: `1px solid ${category.color}30`
-                }}>
-                  {category.icon}
-                  <Typography 
-                    variant="h5" 
-                    sx={{ 
-                      ml: 2,
-                      color: category.color,
-                      fontWeight: 700,
-                      fontFamily: '"Comic Sans MS", cursive',
-                      textShadow: `0 0 10px ${category.color}50`
-                    }}
-                  >
-                    {category.category}
-                  </Typography>
-                </Box>
-                
-                {/* 表格数据渲染 (王者荣耀和和平精英) */}
-                {category.tableData && (
-                  <TableContainer component={Paper} sx={{ 
-                    mb: 2, 
-                    background: 'rgba(255, 255, 255, 0.8)',
-                    borderRadius: '12px',
-                    border: `1px solid ${category.color}30`
-                  }}>
-                    <Table size="small">
-                      <TableHead>
-                        <TableRow sx={{ background: `${category.color}20` }}>
-                          <TableCell sx={{ 
-                            color: category.color, 
-                            fontWeight: 'bold',
-                            fontFamily: '"Comic Sans MS", cursive',
-                            border: `1px solid ${category.color}30`
-                          }}>
-                            {language === 'zh' ? '段位' : 'Rank'}
-                          </TableCell>
-                          <TableCell sx={{ 
-                            color: category.color, 
-                            fontWeight: 'bold',
-                            fontFamily: '"Comic Sans MS", cursive',
-                            border: `1px solid ${category.color}30`
-                          }}>
-                            {language === 'zh' ? '陪练' : 'Training'}
-                          </TableCell>
-                          <TableCell sx={{ 
-                            color: category.color, 
-                            fontWeight: 'bold',
-                            fontFamily: '"Comic Sans MS", cursive',
-                            border: `1px solid ${category.color}30`
-                          }}>
-                            {language === 'zh' ? '陪玩' : 'Playing'}
-                          </TableCell>
-                          <TableCell sx={{ 
-                            color: category.color, 
-                            fontWeight: 'bold',
-                            fontFamily: '"Comic Sans MS", cursive',
-                            border: `1px solid ${category.color}30`
-                          }}>
-                            {language === 'zh' ? '包月' : 'Monthly'}
-                          </TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {category.tableData.map((row, index) => (
-                          <TableRow key={index} sx={{
-                            '&:hover': {
-                              background: `${category.color}10`
-                            }
-                          }}>
-                            <TableCell sx={{ 
-                              color: 'rgba(0, 0, 0, 0.8)',
-                              border: `1px solid ${category.color}20`,
-                              fontWeight: 'bold'
-                            }}>
-                              {row.rank}
-                            </TableCell>
-                            <TableCell sx={{ 
-                              color: 'rgba(0, 0, 0, 0.7)',
-                              border: `1px solid ${category.color}20`
-                            }}>
-                              {row.training}
-                            </TableCell>
-                            <TableCell sx={{ 
-                              color: 'rgba(0, 0, 0, 0.7)',
-                              border: `1px solid ${category.color}20`
-                            }}>
-                              {row.playing}
-                            </TableCell>
-                            <TableCell sx={{ 
-                              color: 'rgba(0, 0, 0, 0.7)',
-                              border: `1px solid ${category.color}20`
-                            }}>
-                              {row.monthly}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                )}
-                
-                {/* 服务列表渲染 (其他区和增值区) */}
-                {category.services && (
-                  <Box sx={{ mb: 2 }}>
-                    <Grid container spacing={1}>
-                      {category.services.map((service, index) => (
-                        <Grid item xs={12} sm={6} key={index}>
-                          <Box sx={{
-                            p: 2,
-                            background: `linear-gradient(135deg, ${category.color}15 0%, ${category.color}05 100%)`,
-                            borderRadius: '10px',
-                            border: `1px solid ${category.color}30`,
-                            transition: 'all 0.2s ease',
-                            '&:hover': {
-                              background: `linear-gradient(135deg, ${category.color}25 0%, ${category.color}15 100%)`,
-                              transform: 'translateY(-2px)'
-                            }
-                          }}>
-                            <Typography 
-                              variant="body2" 
-                              sx={{ 
-                                color: 'rgba(0, 0, 0, 0.8)',
-                                fontWeight: 'bold',
-                                mb: 0.5,
-                                fontSize: '0.9rem'
-                              }}
-                            >
-                              {service.name}
-                            </Typography>
-                            <Typography 
-                              variant="body2" 
-                              sx={{ 
-                                color: category.color,
-                                fontWeight: 'bold',
-                                fontSize: '1rem'
-                              }}
-                            >
-                              {service.price}
-                            </Typography>
-                          </Box>
-                        </Grid>
-                      ))}
-                    </Grid>
-                  </Box>
-                )}
-                
-                {/* 备注信息 */}
-                {category.note && (
-                  <Box sx={{
-                    mt: 2,
-                    p: 2,
-                    background: `linear-gradient(135deg, ${category.color}10 0%, transparent 100%)`,
-                    borderRadius: '10px',
-                    border: `1px solid ${category.color}20`
-                  }}>
-                    <Typography 
-                      variant="caption" 
-                      sx={{ 
-                        color: category.color,
-                        fontStyle: 'italic',
-                        display: 'block',
-                        fontWeight: 'bold'
-                      }}
-                    >
-                      {category.note}
-                    </Typography>
-                  </Box>
-                )}
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
+                  boxShadow: '0 4px 15px rgba(139, 69, 19, 0.3)',
+                  border: '2px solid #DEB887'
+                }}
+              />
+            </Box>
+            
+            {/* 图片说明 */}
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                color: '#8B4513',
+                fontStyle: 'italic',
+                fontFamily: '"Comic Sans MS", "Microsoft YaHei", cursive',
+                mt: 2
+              }}
+            >
+              {language === 'zh' 
+                ? '📋 详细价格表请参考上图，如有疑问欢迎咨询！' 
+                : '📋 Please refer to the detailed price list above. Feel free to inquire if you have any questions!'}
+            </Typography>
+          </CardContent>
+        </Card>
+      </Box>
+
       
       {/* 备注信息 */}
       <Box sx={{ 
@@ -589,25 +308,59 @@ function PriceList() {
                     variant="h6" 
                     sx={{ 
                       color: '#8B4513',
-                      mb: 1,
+                      mb: 2,
                       fontWeight: 'bold',
                       fontFamily: '"Comic Sans MS", "Microsoft YaHei", cursive'
                     }}
                   >
                     {language === 'zh' ? '微信联系' : 'WeChat Contact'}
                   </Typography>
+                  
+                  {/* 微信二维码图片 */}
+                  <Box sx={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    mb: 2
+                  }}>
+                    <img 
+                      src="/images/wechat_2025-06-20_202513_860.png"
+                      alt={language === 'zh' ? '微信二维码' : 'WeChat QR Code'}
+                      style={{
+                        width: '120px',
+                        height: '120px',
+                        borderRadius: '12px',
+                        border: '3px solid #07C160',
+                        boxShadow: '0 4px 15px rgba(7, 193, 96, 0.3)'
+                      }}
+                    />
+                  </Box>
+                  
                   <Typography 
-                    variant="h5" 
+                    variant="body1" 
                     sx={{ 
                       color: '#CD853F',
                       fontWeight: 'bold',
                       fontFamily: 'monospace',
                       background: 'rgba(139, 69, 19, 0.1)',
                       p: 1,
-                      borderRadius: '8px'
+                      borderRadius: '8px',
+                      textAlign: 'center'
                     }}
                   >
                     CR_Studio
+                  </Typography>
+                  
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      color: '#8B4513',
+                      mt: 1,
+                      fontStyle: 'italic',
+                      textAlign: 'center'
+                    }}
+                  >
+                    {language === 'zh' ? '扫码添加微信' : 'Scan to add WeChat'}
                   </Typography>
                 </Box>
               </Grid>
