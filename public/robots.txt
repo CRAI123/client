@@ -1,3 +1,20 @@
 # https://www.robotstxt.org/robotstxt.html
 User-agent: *
-Disallow:
+Allow: /
+
+# Sitemap
+Sitemap: https://crstudio.com/sitemap.xml
+
+# Disallow admin pages
+Disallow: /admin
+Disallow: /login
+Disallow: /register
+
+# Allow important pages for CR Studio
+Allow: /
+Allow: /about
+Allow: /resources
+Allow: /price-list
+Allow: /download
+Allow: /vip-zone
+Allow: /contact

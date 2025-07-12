@@ -64,7 +64,7 @@ function Home() {
         <Typography 
           variant="subtitle1" 
           sx={{ 
-            mb: 4, 
+            mb: 2, 
             color: theme.palette.text.secondary,
             maxWidth: '600px',
             mx: 'auto',
@@ -72,7 +72,21 @@ function Home() {
             lineHeight: 1.6
           }}
         >
-          {language === 'zh' ? '这里展示我的作品、经历和联系方式' : 'Showcasing my work, experience, and contact information'}
+          {language === 'zh' ? 'CR Studio - 专业的创意工作室，提供优质的数字内容创作服务' : 'CR Studio - Professional creative studio offering high-quality digital content creation services'}
+        </Typography>
+        <Typography 
+          variant="body1" 
+          sx={{ 
+            mb: 4, 
+            color: theme.palette.text.secondary,
+            maxWidth: '700px',
+            mx: 'auto',
+            letterSpacing: '0.02em',
+            lineHeight: 1.5,
+            opacity: 0.8
+          }}
+        >
+          {language === 'zh' ? '在CR Studio，我们专注于创新技术、资源分享和专业服务，为客户提供全方位的数字化解决方案' : 'At CR Studio, we focus on innovative technology, resource sharing, and professional services, providing comprehensive digital solutions for our clients'}
         </Typography>
         <Button 
           variant="contained" 
