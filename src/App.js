@@ -1,13 +1,12 @@
 import React, { useState, createContext, useContext } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
-import { AppBar, Toolbar, Typography, Container, Button, Box, useTheme, IconButton, Menu, MenuItem } from '@mui/material';
+import { AppBar, Toolbar, Typography, Container, Button, Box, IconButton, Menu, MenuItem } from '@mui/material';
 
 import PersonIcon from '@mui/icons-material/Person';
 import LogoutIcon from '@mui/icons-material/Logout';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import Home from './pages/Home';
 import About from './pages/About';
-
 import Contact from './pages/Contact';
 import Resources from './pages/Resources';
 import ArticleDetail from './pages/ArticleDetail';
@@ -17,7 +16,9 @@ import Register from './pages/Register';
 import Profile from './pages/Profile';
 import Download from './pages/Download';
 import PriceList from './pages/PriceList';
+import NotFound from './pages/NotFound';
 import Footer from './components/Footer';
+import DeviceGuard from './components/DeviceGuard';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import VipZone from './pages/VipZone';
 
@@ -221,52 +222,54 @@ function App() {
     <LanguageContext.Provider value={{ language, toggleLanguage }}>
       <AuthProvider>
         <Router>
-          <Box sx={{ 
-            background: 'linear-gradient(to right, #ffffff, #f8fafc)',
-            minHeight: '100vh',
-            backgroundSize: 'cover',
-            position: 'relative',
-            display: 'flex',
-            flexDirection: 'column',
-            '&::before': {
-              content: '""',
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: 'radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.03) 0%, rgba(255, 255, 255, 0) 70%)',
-              pointerEvents: 'none',
-            }
-          }}>
-            <NavigationBar />
-        <Container maxWidth="md" sx={{ 
-          mt: 4,
-          position: 'relative',
-          zIndex: 1,
-          flex: '1 0 auto',
-          mb: 4
-        }}>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/about" element={<About />} />
-
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/resources" element={<Resources />} />
-            <Route path="/price-list" element={<PriceList />} />
-            <Route path="/download" element={<Download />} />
-            <Route path="/article/:category/:id" element={<ArticleDetail />} />
-            <Route path="/admin" element={<Admin />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/vip-zone" element={<VipZone />} />
-          </Routes>
-        </Container>
-        <Footer />
-      </Box>
-    </Router>
-    </AuthProvider>
+          <DeviceGuard>
+            <Box sx={{ 
+              background: 'linear-gradient(to right, #ffffff, #f8fafc)',
+              minHeight: '100vh',
+              backgroundSize: 'cover',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.03) 0%, rgba(255, 255, 255, 0) 70%)',
+                pointerEvents: 'none',
+              }
+            }}>
+              <NavigationBar />
+              <Container maxWidth="md" sx={{ 
+                mt: 4,
+                position: 'relative',
+                zIndex: 1,
+                flex: '1 0 auto',
+                mb: 4
+              }}>
+                <Routes>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/about" element={<About />} />
+                  <Route path="/contact" element={<Contact />} />
+                  <Route path="/resources" element={<Resources />} />
+                  <Route path="/price-list" element={<PriceList />} />
+                  <Route path="/download" element={<Download />} />
+                  <Route path="/article/:category/:id" element={<ArticleDetail />} />
+                  <Route path="/admin" element={<Admin />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
+                  <Route path="/profile" element={<Profile />} />
+                  <Route path="/vip-zone" element={<VipZone />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </Container>
+              <Footer />
+            </Box>
+          </DeviceGuard>
+        </Router>
+      </AuthProvider>
     </LanguageContext.Provider>
   );
 }
