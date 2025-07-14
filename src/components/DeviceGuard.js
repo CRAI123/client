@@ -8,36 +8,10 @@ function DeviceGuard({ children }) {
 
   useEffect(() => {
     const detectDevice = () => {
-      const userAgent = navigator.userAgent.toLowerCase();
-      const platform = navigator.platform.toLowerCase();
+      // 移除所有设备限制，允许所有设备访问
+      const shouldBlock = false;
       
-      // 检测是否为苹果电脑 (Mac)
-      const isMac = (
-        platform.includes('mac') || 
-        userAgent.includes('macintosh') || 
-        userAgent.includes('mac os x') ||
-        userAgent.includes('darwin')
-      );
-      
-      // 排除移动设备
-      const isMobile = (
-        userAgent.includes('iphone') ||
-        userAgent.includes('ipad') ||
-        userAgent.includes('ipod') ||
-        userAgent.includes('mobile') ||
-        userAgent.includes('android')
-      );
-      
-      // 只阻止苹果电脑，不阻止移动设备和Windows电脑
-      const shouldBlock = isMac && !isMobile;
-      
-      console.log('Device detection:', {
-        userAgent,
-        platform,
-        isMac,
-        isMobile,
-        shouldBlock
-      });
+      console.log('Device detection: All devices allowed');
       
       setIsBlocked(shouldBlock);
       setIsLoading(false);
