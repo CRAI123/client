@@ -2,7 +2,6 @@ import React, { useContext } from 'react';
 import { Box, Typography, Button, useTheme } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import CodeIcon from '@mui/icons-material/Code';
-import TerminalIcon from '@mui/icons-material/Terminal';
 import { LanguageContext } from '../App';
 import Chat from '../components/Chat';
 
@@ -103,23 +102,7 @@ function Home() {
         >
           {language === 'zh' ? '关于我' : 'About Me'}
         </Button>
-        <Button 
-          variant="outlined" 
-          size="large"
-          onClick={() => navigate('/portfolio')}
-          sx={{ 
-            px: 3,
-            py: 1.2,
-            borderRadius: '4px',
-            borderColor: theme.palette.primary.main,
-            '&:hover': {
-              boxShadow: '0 0 10px rgba(0, 229, 255, 0.3)'
-            }
-          }}
-          startIcon={<TerminalIcon />}
-        >
-          {language === 'zh' ? '作品集' : 'Portfolio'}
-        </Button>
+
       </Box>
       
       {/* AI对话组件 */}
