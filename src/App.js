@@ -9,6 +9,7 @@ import Home from './pages/Home';
 import About from './pages/About';
 import Contact from './pages/Contact';
 import Resources from './pages/Resources';
+import Projects from './pages/Projects';
 import ArticleDetail from './pages/ArticleDetail';
 import Admin from './pages/Admin';
 import Login from './pages/Login';
@@ -21,6 +22,7 @@ import Footer from './components/Footer';
 import DeviceGuard from './components/DeviceGuard';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import VipZone from './pages/VipZone';
+import KuaishouService from './pages/KuaishouService';
 
 // 创建语言上下文
 export const LanguageContext = createContext();
@@ -145,9 +147,10 @@ function NavigationBar() {
         </Typography>
         <Button color="primary" onClick={() => navigate('/')} sx={{ mx: 0.8 }}>{language === 'zh' ? '首页' : 'Home'}</Button>
         <Button color="primary" onClick={() => navigate('/about')} sx={{ mx: 0.8 }}>{language === 'zh' ? '关于我' : 'About'}</Button>
-
+        <Button color="primary" onClick={() => navigate('/projects')} sx={{ mx: 0.8 }}>{language === 'zh' ? '项目展示' : 'Projects'}</Button>
+        {/* <Button color="primary" onClick={() => navigate('/kuaishou-service')} sx={{ mx: 0.8 }}>{language === 'zh' ? '快手服务' : 'Kuaishou Service'}</Button> */}
         <Button color="primary" onClick={() => navigate('/resources')} sx={{ mx: 0.8 }}>{language === 'zh' ? '资料分享' : 'Resources'}</Button>
-        <Button color="primary" onClick={() => navigate('/price-list')} sx={{ mx: 0.8 }}>{language === 'zh' ? '价格表' : 'Price List'}</Button>
+        {/* <Button color="primary" onClick={() => navigate('/price-list')} sx={{ mx: 0.8 }}>{language === 'zh' ? '价格表' : 'Price List'}</Button> */}
         <Button color="primary" onClick={() => navigate('/download')} sx={{ mx: 0.8 }}>{language === 'zh' ? '应用下载' : 'Download'}</Button>
         <Button color="primary" onClick={() => navigate('/vip-zone')} sx={{ mx: 0.8, color: '#FFD700', '&:hover': { backgroundColor: 'rgba(255, 215, 0, 0.1)' } }}>{language === 'zh' ? '会员专区' : 'VIP Zone'}</Button>
         <Button color="primary" onClick={() => navigate('/contact')} sx={{ mx: 0.8 }}>{language === 'zh' ? '联系方式' : 'Contact'}</Button>
@@ -252,6 +255,8 @@ function App() {
                 <Routes>
                   <Route path="/" element={<Home />} />
                   <Route path="/about" element={<About />} />
+                  <Route path="/projects" element={<Projects />} />
+                  <Route path="/kuaishou-service" element={<KuaishouService />} />
                   <Route path="/contact" element={<Contact />} />
                   <Route path="/resources" element={<Resources />} />
                   <Route path="/price-list" element={<PriceList />} />

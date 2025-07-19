@@ -85,7 +85,7 @@ function About() {
               </Typography>
             </Box>
             <Typography paragraph sx={{ color: theme.palette.text.secondary, lineHeight: 1.7 }}>
-              大家好，我是刘宸睿，一名专注于计算机科学与人工智能领域的开发者。
+              大家好，我是一名专注于计算机科学与人工智能领域的开发者。
               主攻Python与C++开发，熟悉数据结构、算法优化及高性能编程。
               人工智能领域：代码学习/深度学习框架。
               熟悉前端技术（如React/Next.js等）。
